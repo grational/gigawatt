@@ -20,11 +20,13 @@ Handles automatically the boring steps usully encountered starting a new applica
 * automatically handle the ssh keys procedures related to push code without any prompt
 
 === How can I use it?
-Just open your trusty terminal and type:
+For a cold start just two steps are needed.
+
+. Firstly add a new git profile (e.g. work, home, github...). It's required just the first time (or when you want to add an addictional git backend):
+
+ gigawatt add-profile my-profile
  
- # add a new profile (e.g. work, home, github...)
- # mandatory only if no profile has been set
- gigawatt add-profile myprofile
+. Actually create the new project:
 
  gigawatt create great-app      
 
