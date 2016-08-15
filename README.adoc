@@ -1,5 +1,5 @@
-image::img/logo.png[float="right"]
 //== GIGAWATT: 'Git Great Applications Wrapper'
+image::img/logo.png[float="text-right"]
 
 == What is Gigawatt?
 A boilerplate killer to start new software applications and place them under 'git' version control at the speed of light! 
@@ -21,8 +21,12 @@ Handles automatically the boring steps usully encountered starting a new applica
 
 === How can I use it?
 Just open your trusty terminal and type:
+ 
+ # add a new profile (e.g. work, home, github...)
+ # mandatory only if no profile has been set
+ gigawatt add-profile myprofile
 
- gigawatt create great-app
+ gigawatt create great-app      
 
 and follow the instructions. +gigawatt+ has sensible defaults and asks only if it's really needed (and just the first time).
 
