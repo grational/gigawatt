@@ -16,3 +16,5 @@ tags
 ### Custom ###
 # asciidoctor
 *.html
+# testing script
+test.sh

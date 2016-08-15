@@ -294,6 +294,15 @@ add_profile() { # {{{
 	## ssh key {{{
 	until git_ssh_test "${git_ssh_user}" "${git_host}"; do
 
+		### check involved files {{{
+		if [[ ! -d "${HOME}/.ssh" ]]; then
+			mkdir "${HOME}/.ssh"
+		fi
+		if [[ ! -f "${HOME}/.ssh/config" ]]; then
+			touch "${HOME}/.ssh/config"
+		fi
+		# }}}
+
 		### get keys {{{
 		IFS=$'\n' local_pubkey_files=($(find "${HOME}/.ssh" -iname '*.pub'))
 		: ${local_pubkey_files:=empty} # set default
@@ -367,8 +376,8 @@ add_profile() { # {{{
 
 			# b1. there are matches: append a custom conf to ~/.ssh/config
 			if [[ ${#orphan_keys[@]} -gt 0 ]]; then
-				slog "Some of your ssh keys are already authorized on '${git_backend}'."
-				slog -hg "Choose to permanently use one of them or to generate a new one:"
+				slog -hg "Some of your ssh keys are already authorized on '${git_backend}'."
+				slog "Choose to permanently use one of them or to generate a new one:"
 				pubkey_file="$(select_local_key orphan_keys "$git_backend" "$git_token" "$git_api")"
 
 			# b2. no match: select between keys or new one as in 'Case 2'

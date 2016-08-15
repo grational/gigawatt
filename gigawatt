@@ -31,6 +31,7 @@ set -e # exit if any command has a non-zero exit status (we avoid tests)
 set -u # treat unset variables as an error
 # set -x # print each command and resolve variables too before execute it (debug)
 set -o pipefail # if any command in a pipeline fails, that return code will be used as the return code of the whole pipeline
+IFS=$'\n\t'
 readonly gwFILE="$(readlink -e "$(type -P "${BASH_SOURCE}" || echo "${BASH_SOURCE}")")"
 readonly gwNAME="${gwFILE##*/}"
 readonly gwDIR="${gwFILE%/*}"
@@ -102,6 +103,9 @@ case "$comma" in
 	add-profile)
 		if [[ ! $param =~ $profile_pattern ]]; then
 			eecho 'Profile names may contains only letters, numbers plus dot, dash and underscore'
+			usage; exit
+		elif [[ $param == nop ]]; then
+			eecho "Provide a name for the new profile."
 			usage; exit
 		elif [[ $(git config "$param".user) ]]; then
 			eecho "Profile '$param' is already used."

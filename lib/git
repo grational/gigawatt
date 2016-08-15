@@ -1,7 +1,7 @@
 ## ------------------------------------------- ##
 ## @lib: git-related functions                 ##
 ## @author: Giuseppe Ricupero                  ##
-## @date: 14-08-2016 17.17                     ##
+## @date: 15-08-2016 21.07                     ##
 ## @description:                               ##
 ## every function to deal with the git backend ##
 ## ------------------------------------------- ##
@@ -13,9 +13,9 @@ add_gitreadme() { # {{{
 		sed 's/^|//' > "${gitreadme}" <<- EOF
 		|# ${project}
 		|
-		|"${description}
+		|${description}
 		EOF
-		# 2.a unit test
+		# unit test
 		if [[ ! -f "${gitreadme}" ]]; then
 			slog "${gitreadme} not created correctly: exiting..."
 			exit 1
