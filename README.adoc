@@ -17,6 +17,7 @@ Handles automatically the boring steps usully encountered starting a new applica
 *** https://gitlab.com[Gitlab] (both public site and custom private installations)
 //*** https://bitbucket.org[Bitbucket]
 * publish code in your personal repository or as a group/organization member
+* automatically handle the ssh keys procedures related to push code without any prompt
 
 === How can I use it?
 Just open your trusty terminal and type:
