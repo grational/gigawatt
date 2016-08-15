@@ -1,0 +1,54 @@
+= Gigawatt
+
+// TODO {{{
+== TODO
+
+// gigawatt {{{
+=== gigawatt
+. [task] print a confirmation message before the actual steps of creation of the project
+. [task] add message at the end to say where the project has been created (successfully)
+. [question] remove everything with a +trap+ if something goes wrong when stable (or create the project under /tmp and then move to the workspace location when finished)
+. [bug] check if the project name is already used on the git backend side
+. [task] add option to create new igniters (asks for multiple tags and a new command)
+. [task] split create_profile function into multiple ones
+. [task] add support to https://bitbucket.org[Bitbucket]
+// }}}
+
+// groovy-plus {{{
+=== groovy-plus
+==== (doesn't work at the moment)
+. [task] add code in +build.gradle+ to create +gradle.properties+ file if
+   the file is missing (as when the project is just git-cloned).
+// }}}
+
+// NOTES {{{
+=== NOTES
+. alternative to ssh keys: USE TOKENS?
+.. github (verified)
+... git remote add origin
+
+ https://${user}:${token}@github.com/${user}/${project}.git
+
+.. gitlab (seems impossible!)
+... git remote add origin
+
+ https://${user}:${token}@gitlab.com/
+
+// }}}
+
+// FUTURE {{{
+=== FUTURE
+* create an account on the supported backend (semi-)automatically
+* generate token on the backend automatically (with user credentials)
+* use +/bin/sh+ to be more portable: when ready execute
+
+ checkbashism -npx < <(\
+	sed -e 's/bash/sh/' -e '/^PAYLOAD/,$d' ~/bin/groovy-support/gigawatt)
+
+** if needed obtain checkbashism installing the +devscripts+ package
+
+ sudo apt install devscripts
+
+// }}}
+
+// vim: ft=asciidoc:fdm=marker

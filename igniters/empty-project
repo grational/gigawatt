@@ -1,0 +1,23 @@
+## -------------------------- ##
+## @igniter: empty-project    ##
+## @author: Giuseppe Ricupero ##
+## @date: 10-08-2016 08.36    ##
+## @description:              ##
+## create an empty project    ##
+## -------------------------- ##
+
+## variable initialization {{{
+readonly igNAME="${BASH_SOURCE##*/}"
+readonly -a igDEPS=()
+readonly -a igTAGS=(vim sublimetext eclipse intellij linux osx)
+# }}}
+
+## check deps {{{
+check_deps igDEPS "$igNAME"
+# }}}
+
+## add specific gitignore # {{{
+add_gitignore igTAGS
+# }}}
+
+# vim: ft=zsh:fdm=marker

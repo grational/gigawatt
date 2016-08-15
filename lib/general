@@ -1,0 +1,508 @@
+## ----------------------------------------- ##
+## @lib: general functions                   ##
+## @author: Giuseppe Ricupero                ##
+## @date: 14-08-2016 20.39                   ##
+## @description:                             ##
+## it contains all general purpose functions ##
+## ----------------------------------------- ##
+
+eecho() { # {{{
+	echo >&2 $*
+} # }}}
+
+join() { # {{{
+	local IFS="$1"
+	shift
+	echo "$*"
+} # }}}
+
+igniters() { # {{{
+	join '|' $(basename -a ${gwDIR}/igniters/*)
+} # }}}
+
+profiles() { # {{{
+	join '|' $(git config "${gwNAME}.profiles")
+} # }}}
+
+usage() { # {{{
+local tail="${1:-yes}"
+	echo 
+	echo "To create a new ${gwNAME} project:"
+	echo "  $gwNAME create <project name>"
+	echo
+	echo "To add a new profile:"
+	echo "  $gwNAME add-profile <profile name>"
+	if [[ $tail == yes ]]; then
+		echo
+		echo "For more help, see '$gwNAME --help'."
+	fi
+}
+
+gwhelp() {
+	usage notail
+	echo
+	echo '<create> options:'
+	echo '  [-d | --project-description] <project description>'
+	echo "  [-I | --igniter]             <$(igniters)>"
+	echo "  [-P | --profile]             <$(profiles || echo 'profile name'))>"
+	echo '  [-U | --unversioned]'
+	exit 1
+} # }}}
+
+repeat() { # {{{
+	local char="$1"
+	local times="$2"
+	printf "${char}%.0s" $(seq 1 "${times}"); echo
+} # }}}
+
+slog() { # {{{
+	if [[ 'x-hg' = "x${1}" ]]; then
+		shift; local text="[${gwNAME}] $*"
+		repeat '=' "${#text}"
+		echo "$text"
+		repeat '=' "${#text}"
+	else
+		echo "[${gwNAME}] $*"
+	fi
+} # }}}
+
+git_auth_header() { # {{{
+	local backend="$1"
+	local token="$2"
+
+	case "$backend" in
+		github)
+			echo "Authorization: token $token"
+		;;
+		gitlab)
+			echo "PRIVATE-TOKEN: $token"
+		;;
+	esac
+} # }}}
+
+git_ssh_test() { # {{{
+	local ssh_user="${1}"
+	local host="${2}"
+
+	if [[ -z "$(ssh -q -T -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=no "${ssh_user}@${host}" 2>&1)" ]]; then
+		return 1
+	else
+		return 0
+	fi
+} # }}}
+
+new_rsa_key() { # {{{
+	local git_backend="${1}"
+	local sshd="${HOME}/.ssh"
+	local prkey_basename="id_rsa_${git_backend}"
+	local prkey_file="${sshd}/${prkey_basename}"
+
+	# avoid filename collisions
+	local counter=1
+	while [[ -f $prkey_file ]]; do
+		prkey_file="${sshd}/${prkey_basename}_${counter}"
+		((counter++))
+	done
+
+	# actually create the new key
+	ssh-keygen -q -t rsa -N '' -b 4096 -C "$(whoami)@$(hostname)" \
+		-f "${prkey_file}"
+
+	echo "${prkey_file}"
+} # }}}
+
+push_new_key() { # {{{
+	local git_backend="${1}"
+	local git_token="${2}"
+	local git_api="${3}"
+	local pubkey_file="${4}"
+
+	local ssh_pubkey=$(cut -d' ' -f1,2 < "${pubkey_file}")
+	local key_title=$(cut -d' ' -f3 < "${pubkey_file}")
+
+	curl -s -H 'Content-Type:application/json' \
+		-H "$(git_auth_header $git_backend $git_token)" \
+		"${git_api}/user/keys" \
+		-d "{\"title\":\"${key_title}\",\"key\":\"${ssh_pubkey}\"}" \
+		>/dev/null
+} # }}}
+
+comment_out_previous_ssh_conf() { # {{{
+	local git_host="$1"
+
+	local start_pattern="^\s*Host\s\+${git_host//./[.]}"
+	local stop_pattern='^\s*IdentityFile'
+	local ssh_config="${HOME}/.ssh/config"
+
+	sed -i "/$start_pattern/,/$stop_pattern/ s/^/# /" "${ssh_config}"
+} # }}}
+
+append_ssh_config() { # {{{
+	local git_backend="${1}"
+	local git_host="${2}"
+	local prkey_file="${3}"
+	local git_ssh_user="${4}"
+
+	ssh_config="${HOME}/.ssh/config"
+
+	# comment out ineffective previously configuration about $git_host
+	comment_out_previous_ssh_conf "$git_host"
+
+	# add a blank line if there is already some configuration
+	[[ $(wc -l < "${ssh_config}") -gt 0 ]] && echo >> "${ssh_config}"
+
+	sed 's/^|//' >> "${ssh_config}" <<- EOF
+	|Host         $git_host
+	|	IdentityFile $prkey_file
+	EOF
+} # }}}
+
+select_local_key() { # {{{
+	local -n pubkeys="$1"
+	local git_backend="$2"
+	local git_token="$3"
+	local git_api="$4"
+
+	select pubkey_file in "${pubkeys[@]}" 'new key'; do
+		case "$pubkey_file" in
+			'new key')
+				# a. generate a new couple of private/public rsa keys
+				local prkey_file="$(new_rsa_key "${git_backend}")"
+				pubkey_file="${prkey_file}.pub"
+				# b. load public key on backend
+				push_new_key "${git_backend}" "${git_token}" "${git_api}" "${pubkey_file}"
+				break ;;
+			*)
+				break ;;
+		esac
+	done
+
+	echo "$pubkey_file"
+} # }}}
+
+get_orphan_keys() { # {{{
+	local -n remote_keys="${1}"
+	local -a orphan_keys
+	local ssh_config="${HOME}/.ssh"
+
+	local rkey lkey
+	for rkey in "${remote_keys[@]}"; do
+		lkey=$(grep -lR "${rkey}" "$ssh_config"/*.pub || echo none)
+		if [[ $lkey != none ]]; then
+			orphan_keys+=("$lkey")
+		fi
+	done
+
+	echo "$(join ';' "${orphan_keys[@]}")"
+} # }}}
+
+save_gw_profile() { # {{{
+	local new_profile="$1"
+	local profiles
+
+	if git config "${gwNAME}.profiles" &>/dev/null; then
+		profiles="$(git config "${gwNAME}.profiles") ${new_profile}"
+	else
+		profiles="${new_profile}"
+	fi
+	git config --global "${gwNAME}.profiles" "${profiles}"
+} # }}}
+
+add_profile() { # {{{
+	local profile="${1:-default}"
+
+	## workspace {{{
+	local workspace
+	local workspaces=("$(find "${HOME}" -maxdepth 2 -type d -name workspace)")
+	slog -hg "Choose the workspace where to store your profile projects"
+	select workspace in "${workspaces[@]}" "${HOME}/${profile}" 'other'; do
+		case $workspace in
+			other) read -p "Path to store '${profile}' projects? " workspace ;;
+		esac
+		if [[ -d $workspace ]]; then
+			break
+		else
+			slog "path '$workspace' does not exists. Do you want to create it? "
+			read -p '> '
+			shopt -s nocasematch
+			if [[ $REPLY =~ y(es)? ]]; then
+				shopt -u nocasematch
+				mkdir -p "$workspace"
+				break
+			fi
+		fi
+	done
+	# }}}
+
+	## git backend {{{
+	## provide git_backend, git_ssh_user, git_host, git_api
+	git_backends=(github gitlab)
+	local git_backend def_git_ssh_user git_ssh_user \
+		def_git_host git_host def_git_api git_api
+	slog -hg "Supported git backends: "
+	select git_backend in "${git_backends[@]}"; do
+		case "${git_backend}" in
+			github)
+				git_ssh_user=git
+				git_host=github.com
+				git_api=https://api.github.com
+				break
+			;;
+			gitlab)
+				def_git_host=gitlab.com
+				read -p "git host (${def_git_host}): " git_host
+				: "${git_host:=$def_git_host}" # assign default if empty
+				def_git_api=https://${git_host}/api/v3
+				read -p "git api, pay attention to http/https (${def_git_api}): " git_api
+				: "${git_api:=$def_git_api}" # assign default if empty
+				def_git_ssh_user=git
+				read -p "git ssh user (${def_git_ssh_user}): " git_ssh_user
+				: "${git_ssh_user:=$def_git_ssh_user}" # assign default if empty
+				break
+			;;
+		esac
+	done
+	# }}}
+
+	## git(hub|lab) user {{{
+	local def_git_user="$(whoami)"
+	read -p "git user (${def_git_user}): " git_user
+	: ${git_user:=$def_git_user}
+	# }}}
+
+	## git token {{{
+	local git_token=empty
+	local github_token="${git_host}/settings/tokens"
+	local gitlab_token="${git_host}/profile/account"
+	slog -hg "To operate programatically on '${git_backend}' a token is required."
+	echo -n "You can obtain your token from the following address: "
+	case "${git_backend}" in
+		github) echo "http://${github_token}";;
+		gitlab) echo "http://${gitlab_token}";;
+	esac
+	until # do-until loop
+		read -p "${git_backend} token (mandatory): " git_token
+		: "${git_token:=empty}"
+		[[ $(curl -s --connect-timeout 60 -H "$(git_auth_header "$git_backend" "$git_token")" "$git_api"/user | grep -oP '"(?:login|username)":\h*"\K[^"]+') == $git_user ]]
+	do : ;done
+	# until [[ $(curl -s --connect-timeout 60 -H "$(git_auth_header "$git_backend" "$git_token")" "$git_api"/user | grep -oP '"(?:login|username)":\h*"\K[^"]+') == $git_user ]]; do
+	# 	read -p "${git_backend} token (mandatory): " git_token
+	# 	: "${git_token:=empty}"
+	# done
+	# }}}
+
+	## ssh key {{{
+	until git_ssh_test "${git_ssh_user}" "${git_host}"; do
+
+		### get keys {{{
+		IFS=$'\n' local_pubkey_files=($(find "${HOME}/.ssh" -iname '*.pub'))
+		: ${local_pubkey_files:=empty} # set default
+		IFS=$'\n' remote_auth_keys=($(curl -s -H "$(git_auth_header $git_backend $git_token)" "${git_api}/user/keys" | grep -oP '"key":\h*"\K[^"]+' | cut -d' ' -f1,2 || echo empty))
+		if [[ $local_pubkey_files != empty ]]; then
+			local_count=${#local_pubkey_files[@]}
+		else
+			local_count=0
+		fi
+		if [[ $remote_auth_keys != empty ]]; then
+			remote_count=${#remote_auth_keys[@]}
+		else
+			remote_count=0
+		fi
+		# }}}
+
+		### 'Case 1' {{{
+		### no local keys, no remote keys: to test with phd git backend
+		if [[ $local_count -eq 0 ]] && [[ $remote_count -eq 0 ]]; then
+			# a. generate a new couple of private/public rsa keys
+			prkey_file="$(new_rsa_key "${git_backend}")"
+			pubkey_file="${prkey_file}.pub"
+
+			# b. load public key on backend
+			push_new_key "${git_backend}" "${git_token}" "${git_api}" "${pubkey_file}"
+
+			# c. append a specific configuration on ~/.ssh/config
+			append_ssh_config "${git_backend}" "${git_host}" "${prkey_file}" "${git_ssh_user}"
+		# }}}
+
+		### 'Case 2' {{{
+		### some local keys, no remote keys
+		elif [[ $local_count -gt 0 ]] && [[ $remote_count -eq 0 ]]; then
+			# 0. print a warning message and proceed
+			slog "No ssh keys authorized on '${git_host}': choose between "
+			slog -hg "your available keys or create a new one."
+			# a. build a select menu to choose if upload a local key or to create a new one
+			pubkey_file="$(select_local_key local_pubkey_files "$git_backend" "$git_token" "$git_api")"
+			prkey_file="${pubkey_file%.pub}"
+
+			# b. load public key on backend
+			push_new_key "${git_backend}" "${git_token}" "${git_api}" "${pubkey_file}"
+
+			# c. append a specific configuration on ~/.ssh/config
+			append_ssh_config "${git_backend}" "${git_host}" "${prkey_file}" "${git_ssh_user}"
+		# }}}
+
+		### 'Case 3' {{{
+		### no local keys, some remote keys
+		elif [[ $local_count -eq 0 ]] && [[ $remote_count -gt 0 ]]; then
+			# 0. print a warning message and proceed with the points a. b. c. of 'Case 1'
+			slog "There are already '$remote_count' keys authorized on '$git_backend'."
+			slog -hg "Unfortunately no keys are present on this system: creating a new key..."
+			# a. generate a new couple of private/public rsa keys
+			prkey_file="$(new_rsa_key "${git_backend}")"
+			pubkey_file="${prkey_file}.pub"
+
+			# b. load public key on backend
+			push_new_key "${git_backend}" "${git_token}" "${git_api}" "${pubkey_file}"
+
+			# c. append a specific configuration on ~/.ssh/config
+			append_ssh_config "${git_backend}" "${git_host}" "${prkey_file}" "${git_ssh_user}"
+		# }}}
+
+		### 'Case 4' {{{
+		### some local keys, some remote keys
+		elif [[ $local_count -gt 0 ]] && [[ $remote_count -gt 0 ]]; then
+			# a. check if there is a potential match between remote authorized keys
+			#    and local keys
+			IFS=';' read -a orphan_keys <<< "$(get_orphan_keys remote_auth_keys)"
+
+			# b1. there are matches: append a custom conf to ~/.ssh/config
+			if [[ ${#orphan_keys[@]} -gt 0 ]]; then
+				slog "Some of your ssh keys are already authorized on '${git_backend}'."
+				slog -hg "Choose to permanently use one of them or to generate a new one:"
+				pubkey_file="$(select_local_key orphan_keys "$git_backend" "$git_token" "$git_api")"
+
+			# b2. no match: select between keys or new one as in 'Case 2'
+			else
+				pubkey_file="$(select_local_key local_pubkey_files "$git_backend" "$git_token" "$git_api")"
+			fi
+			prkey_file="${pubkey_file%.pub}"
+			# c. append a specific configuration on ~/.ssh/config
+			append_ssh_config "${git_backend}" "${git_host}" "${prkey_file}" "${git_ssh_user}"
+		# }}}
+
+		### 'default case' {{{
+		### ops this is unexpected
+		else
+			eecho "Something wrong is happening:"
+			eecho "local keys count  -> '$local_count'"
+			eecho "remote keys count -> '$remote_count'"
+		fi
+		# }}}
+
+	done
+	# }}}
+
+	## git namespace-id {{{
+	local git_namespace_id
+	local orgs
+	case "${git_backend}" in
+		github)
+			orgs=$(curl --connect-timeout 60 -s -H "Authentication: token ${git_token}" ${git_api}/user/orgs | grep -oP '(?<="login": ")[^"]+(?=")' || echo default)
+			if [[ $orgs != default ]]; then
+				slog "If you want create repos for an organization you belong"
+				slog -hg "on github choose its name (or choose default): "
+				select org in ${orgs} default; do
+					git_namespace_id="${org}"
+					break
+				done
+			else
+				git_namespace_id=default
+			fi
+			;;
+		gitlab)
+			orgs=$(curl --connect-timeout 60 -s -H "PRIVATE-TOKEN: ${git_token}" ${git_api}/namespaces | sed 's/,{/\n/' | grep -oP '(?:path|id)":"?\K[^",]+(?=.*group)' | sed '$!N;s/\n/ /' || echo default )
+			# curl -s -H "PRIVATE-TOKEN: $(git config phd.token)" https://gitlab.com/api/v3/namespaces | jq '.[] | select(.kind == "group") | .path,.id'
+			if [[ $orgs != default ]]; then
+				slog -hg 'You belong to a group: choose to publish as group or yourself (default): '
+				old_ifs="$IFS"; IFS=$'\n'
+				select org in ${orgs} default; do
+					git_namespace_id="${org}"
+					break
+				done; IFS="$old_ifs"
+				# split namespace_id and overwrite user with the name of the group
+				def_git_user="$git_user"
+				IFS=' ' read git_namespace_id git_user <<<$git_namespace_id
+				: "${git_user:=$def_git_user}"
+			else
+				git_namespace_id=default
+			fi
+			;;
+	esac
+	# }}}
+
+	## save configuration {{{
+	save_gw_profile "${profile}"
+	git config --global "${profile}.workspace" "${workspace}"
+	git config --global "${profile}.backend" "${git_backend}"
+	git config --global "${profile}.host" "${git_host}"
+	git config --global "${profile}.api" "${git_api}"
+	git config --global "${profile}.ssh-user" "${git_ssh_user}"
+	git config --global "${profile}.user" "${git_user}"
+	git config --global "${profile}.token" "${git_token}"
+	git config --global "${profile}.namespace-id" "${git_namespace_id}"
+	# }}}
+
+	## asks to set as default {{{
+	slog -hg "Do you want to make '${profile}' profile the default one? (yes)"
+	select REPLY in yes no; do
+		case $REPLY in
+			yes)
+				git config --global "${gwNAME}.default-profile" "${profile}"
+				break;;
+			no)
+				break;;
+		esac
+	done
+	# }}}
+
+	## final message {{{
+	slog -hg "Profile '${profile}' created."
+	# }}}
+} # }}}
+
+gig() { # {{{
+	# parameters fs=','
+	curl -L -s https://www.gitignore.io/api/$@
+} # }}}
+
+add_gitignore() { #{{{
+	local -n tags="$1"
+	local gif='.gitignore'
+
+	sed 's/^|//' >> $gif <<- EOF
+	|# Created with '${gwNAME}' using the API of https://www.gitignore.io #
+	|# @parameters: ${tags[*]}
+	EOF
+
+	gig $(join ',' ${tags[@]}) | grep -v '^# Created' >> "$gif"
+
+	# 2.a unit test
+	if [[ ! -f "$gif" ]]; then
+		slog "$gif not created correctly: exiting..."
+		exit 1
+	fi
+} # }}}
+
+ask_igniter() { # {{{
+	slog "Select one of the available igniters to generate the project: "
+	select igniter in $(basename -a "${gwDIR}"/igniters/*); do
+		break
+	done
+} # }}}
+
+ask_profile() { # {{{
+	slog "Select one of the available profiles for the project: "
+	select profile in $(git config "${gwNAME}.profiles") 'new profile'; do
+		case "$profile" in
+			'new profile')
+				add_profile "$profile"
+				break
+			;;
+			*)
+				break
+			;;
+		esac
+	done
+} # }}}
+
+# vim: ft=zsh:fdm=marker

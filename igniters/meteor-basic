@@ -1,0 +1,27 @@
+## -------------------------------------------------------- ##
+## @igniter: meteor-basic                                   ##
+## @author: Giuseppe Ricupero                               ##
+## @e-mail: <giuseppe.ricupero@polito.it>                   ##
+## @date: 12-08-2016 11.46                                  ##
+## @description: create a basic meteor project using meteor ##
+## -------------------------------------------------------- ##
+
+## variable initialization {{{
+readonly igNAME="${BASH_SOURCE##*/}"
+readonly -a igDEPS=(meteor)
+readonly -a igTAGS=(meteorjs yeoman vim sublimetext linux osx)
+# }}}
+
+## check deps {{{
+check_deps igDEPS "$igNAME"
+# }}}
+
+## build skeleton of the project {{{
+meteor create .
+# }}}
+
+## add specific gitignore # {{{
+add_gitignore igTAGS
+# }}}
+
+# vim: ft=zsh:fdm=marker

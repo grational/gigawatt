@@ -1,0 +1,266 @@
+#!/usr/bin/env bash
+## ------------------------------------------------------ ##
+##    ________.__                             __    __    ##
+##  /  _____/|__| _________ __  _  _______ _/  |__/  |_   ##
+## /   \  ___|  |/ ___\__  \\ \/ \/ /\__  \\   __\   __\  ##
+## \    \_\  \  / /_/  > __ \\     /  / __ \|  |  |  |    ##
+##  \______  /__\___  (____  /\/\_/  (____  /__|  |__|    ##
+##         \/  /_____/     \/             \/              ##
+##                                                        ##
+## Git Great Applications Wrapper                         ##
+## @version: 0.9.8b                                       ##
+## @author: Giuseppe Ricupero                             ##
+## @e-mail: <giuseppe.ricupero@polito.it>                 ##
+## @date: 15-08-2016 11.24                                ##
+## @description:                                          ##
+## upload a freshly created or exising software project   ##
+## to your favorite git backend at the speed of light!    ##
+## ------------------------------------------------------ ##
+
+# shell version test {{{
+# ------------------
+if [[ ! $BASH_VERSION =~ ^(4[.][3-9]|[5-9][.][0-9]+)[.][0-9]+ ]]; then
+	echo >&2 "Your bash main version ($BASH_VERSION) is lower than the required one (4.3)."
+	exit 1
+fi
+# }}}
+
+# Shell settings and miscellanea {{{
+# ------------------------------
+set -e # exit if any command has a non-zero exit status (we avoid tests)
+set -u # treat unset variables as an error
+set -x # print each command and resolve variables too before execute it (debug)
+set -o pipefail # if any command in a pipeline fails, that return code will be used as the return code of the whole pipeline
+readonly gwFILE="$(readlink -e "$(type -P "${BASH_SOURCE}" || echo "${BASH_SOURCE}")")"
+readonly gwNAME="${gwFILE##*/}"
+readonly gwDIR="${gwFILE%/*}"
+# }}}
+
+# dependencies test {{{
+# -----------------
+check_deps() { # {{{
+	local -n deps="$1"
+	local name="$2"
+
+	set +u
+	local com
+	for com in "${deps[@]}"; do
+		if ! command -v "$com" >/dev/null 2>&1; then
+			echo >&2 "'${com}' executable is required to run ${name}. Aborting."
+			exit 1
+		fi
+	done
+	set -u
+} # }}}
+declare -a gwDEPS=(getopt curl sed grep ssh ssh-keygen git ping timeout)
+check_deps gwDEPS "$gwNAME"
+# }}}
+
+# general connection test {{{
+# -----------------------
+reachable() { # {{{
+	local -r host="$1"
+	local -r timeout="${2:-40}"
+	local -r count="${3:-4}"
+	timeout -s SIGTERM "$timeout" ping -c"$count" "$host" >/dev/null 2>&1
+} # }}}
+
+# yahoo servers reply to ICMP
+if ! reachable 'www.yahoo.com'; then
+	echo >&2 "'${gwNAME}' require an internet connection to work correctly. Aborting."
+	exit 1
+fi
+# }}}
+
+# custom functions {{{
+# ----------------
+source ${gwDIR}/lib/general
+# }}}
+
+# handle command line parameters {{{
+# ------------------------------
+if [[ $# -lt 1 ]]; then
+	usage; exit 1
+fi
+
+# parsing main command # {{{
+readonly comma="$1"
+readonly param="${2:-nop}"
+readonly project_pattern='^([a-z][a-z0-9]*[_-]?)+$'
+readonly profile_pattern='^[a-z0-9_.-]+$'
+
+shopt -s nocasematch
+case "$comma" in
+	create)
+		if [[ ! $param =~ $project_pattern ]]; then
+			eecho 'Project names may contains only letters and numbers separated by dash and underscore'
+			usage; exit
+		else
+			readonly project="$param"
+		fi
+		shift;shift;;
+	add-profile)
+		if [[ ! $param =~ $profile_pattern ]]; then
+			eecho 'Profile names may contains only letters, numbers plus dot, dash and underscore'
+			usage; exit
+		elif [[ $(git config "$param".user) ]]; then
+			eecho "Profile '$param' is already used."
+			usage; exit
+		else
+			add_profile "$param"
+			exit 0
+		fi
+		shift;shift;;
+	-h|--help)
+		gwhelp
+		;;
+	*)
+		usage; exit
+	;;
+esac
+shopt -u nocasematch
+# }}}
+
+# optional parameters # {{{
+short='P:d:I:U'
+long='profile:,description:,igniter:,unversioned'
+parsed=$(getopt --options ${short} --longoptions ${long} --name "${BASH_SOURCE}" -- "$@")
+if [[ $? != 0 ]]; then
+	eecho 'Some error occurred parsing command line options: exiting...'
+	exit 1
+fi
+# Add -- at the end of line arguments
+eval set -- "${parsed}"
+
+while true; do
+	case "$1" in
+		-P|--profile)
+			profile="${2}"
+			shift;shift
+			;;
+		-d|--description)
+			description="${2}"
+			shift;shift
+			;;
+		-I|--igniter)
+			igniter="$2"
+			shift;shift
+			;;
+		-U|--unversioned)
+			versioned='off'
+			shift
+			;;
+		--)
+			shift
+			break
+		;;
+		*)
+			slog "Parameters error"
+			exit 1
+		;;
+	esac
+done
+# }}}
+
+# }}}
+
+## 0. variables initializiation {{{
+# -----------------------------
+# assign default
+: "${profiles:="$(profiles)"}"; : "${profiles:=\$s}" # unmatchable
+: "${profile:=$(git config "$gwNAME".default-profile)}"; : "${profile:=off}"
+: "${description:="A '$gwNAME' powered project."}"
+: "${igniter:=$(git config "$profile".default-igniter)}"; : "${igniter:=off}"
+: "${versioned:=on}"
+# Mandatory params check
+[[ ! $profile =~ ^(${profiles})$ ]] && ( slog -hg "No valid profile specified or available as default."; usage; exit 1 )
+readonly workspace="$(git config "${profile}.workspace")"
+readonly project_dir="/tmp/${gwNAME}/${project}"
+# }}}
+
+## 0. Remove potential tmp project {{{
+## -------------------------------
+[[ -d "${project_dir}" ]] && rm -rf "${project_dir}"
+# }}}
+
+## 1. Create project dir {{{
+## ---------------------
+readonly keep_text='Keep existing project'
+readonly delete_text='Delete and create new one'
+if [[ -d "${workspace}/${project}" ]]; then
+	slog -hg "The directory '${workspace}/${project}' already exists. Content: "
+	ls "${workspace}/${project}"
+	slog "Do you want to keep existing project or to create a new one?"
+	select answer in "$keep_text" "$delete_text" quit; do
+		case $answer in
+			"$keep_text")
+				use_existing=yes
+				break;;
+			"$delete_text")
+				rm -rf "${workspace}/${project}"
+				break;;
+			quit)
+				slog " Exiting..."
+				exit 1 ;;
+		esac
+	done
+fi
+: ${use_existing:=off}
+if [[ $use_existing == off ]]; then
+	mkdir -p "${project_dir}"
+fi
+# }}}
+
+## 2. Enter project dir {{{
+## --------------------
+if [[ $use_existing == off ]]; then
+	cd "${project_dir}"
+else
+	cd "${workspace}/${project}"
+fi
+# }}}
+
+## 3. call the chosen igniter to create the project {{{
+## ------------------------------------------------
+if [[ $use_existing == off ]]; then
+	[[ $igniter == off ]] && ask_igniter
+	[[ ! $igniter =~ ^($(igniters))$ ]] && ( slog -hg "The '${igniter}' igniter is not available."; usage; exit 1 )
+	( source ${gwDIR}/igniters/${igniter} )
+fi
+## }}}
+
+## 4. Create remote git repo for the project {{{
+## ------------------------------------------
+if [[ $versioned == on ]]; then
+	# source git functions
+	source "${gwDIR}/lib/git"
+	# a. add README.md
+	add_gitreadme
+	# b. create remote git repo
+	create_git_repo
+	# c. initialize local git repo
+	git_local_initialize
+	# d. link local to remote
+	git_add_remote
+	# e. push local files to remote
+	# git push -u origin master &>/dev/null
+	git push -u origin master
+fi
+
+# }}}
+
+## 5. Actually place the project in workspace {{{
+## ------------------------------------------
+if [[ $use_existing == off ]]; then
+	mv "${project_dir}" "${workspace}"
+fi
+# }}}
+
+## 6. Print final message {{{
+## ----------------------
+slog -hg "Project '${project}' ignited!"
+# }}}
+
+exit 0
+
+# vim: fdm=marker

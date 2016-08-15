@@ -1,0 +1,738 @@
+## --------------------------------------------------------- ##
+## @igniter: groovy-plus                                     ##
+## @version: 0.5beta                                         ##
+## @author: Giuseppe Ricupero                                ##
+## @e-mail: <giuseppe.ricupero@polito.it>                    ##
+## @date: 11-08-2016 10.32                                   ##
+## @description:                                             ##
+## create a groovy project using gradle --init plus extras:  ##
+## - optional nexus support (upload and download)            ##
+## - codenarc linter plugin with sensible configuration      ##
+## - integration with eclipse/eclim                          ##
+## - logging via slf4j-log4j2 by default                     ##
+## - customize package                                       ##
+## - customize classname                                     ##
+## --------------------------------------------------------- ##
+
+default_package() {
+	local def_package="$(git config "$profile".package)"; : "${def_package:=none}"
+
+	if [[ $def_package == none ]]; then
+		local head="$(locale | awk -F'=' '/LANGUAGE/ {print $2}')"
+		local center="$(whoami)"
+		local tail="$(sed -r 's/-([a-z])/\u\1/ig' <<<"${project}")"
+		echo "${head}.${center}.${tail}"
+	else
+		echo "$def_package"
+	fi
+}
+
+save_as_default() {
+	local key="$1"
+	local value="$2"
+	local oldef="$(git config "$profile"."$key")"
+
+	if [[ $value != $oldef ]]; then
+		echo "Save '$key' -> '$value' as default?"
+		select REPLY in yes no; do
+			case $REPLY in
+				yes)
+					git config --global "${profile}"."${key}" "${value}"
+					break;;
+				no)
+					break;;
+			esac
+		done
+	fi
+}
+
+asks_jdk_parameters() {
+	# application
+	slog -hg 'Do you want to create an application instead of a library? (no)'
+	select REPLY in yes no; do
+		application=$REPLY
+		break
+	done
+
+	# package
+	# TODO: check that the passed package name is valid
+	local def_package_name="$(default_package)"
+	slog -hg "Do you want to change the default package? (${def_package_name})"
+	read -p '> ' package_name
+	: "${package_name:="${def_package_name}"}"
+	save_as_default package "$package_name"
+
+	# main class
+	# TODO: check that the passed main class name is valid
+	local def_main_class='Library'
+	slog -hg "Do you want to change the main library class? (${def_main_class})"
+	read -p '> ' main_class
+	: "${main_class:="${def_main_class}"}"
+
+	# fatjar
+	slog -hg 'Do you want to create a fatjar? (no)'
+	select REPLY in yes no; do
+		fatjar=$REPLY
+		break
+	done
+	# nexus
+	slog -hg 'Do you want to add support for a nexus server? (no)'
+	select REPLY in yes no; do
+		case $REPLY in
+			yes)
+				nexus=on
+				break;;
+			no)
+				nexus=off
+				break;;
+		esac
+	done
+}
+
+## asks to customize parameters {{{
+slog -hg 'Do you want to customize parameters? (no)'
+select REPLY in yes no; do
+	case $REPLY in
+		yes)
+			asks_jdk_parameters
+			break;;
+		no)
+			package_name="$(default_package)"
+			main_class='Library'
+			application='off'
+			fatjar='off'
+			nexus="$(git config "$profile".nexus || echo off)"
+			break;;
+	esac
+done
+# }}}
+
+## variable initialization {{{
+# general
+readonly igNAME="${BASH_SOURCE##*/}"
+readonly -a igDEPS=(gradle sed grep)
+readonly -a igTAGS=(java gradle vim eclipse linux)
+# specific
+readonly language='groovy'
+readonly package_path="${package_name//./\/}"
+readonly main_dir="src/main/${language}"
+readonly test_dir="src/test/${language}"
+readonly main_rsc='src/main/resources'
+readonly init_class="Library.${language}"
+readonly init_test="LibraryTest.${language}"
+readonly default_class="${main_dir}/${init_class}"
+readonly default_test="${test_dir}/${init_test}"
+readonly gradle_conf='build.gradle'
+# }}}
+
+## check deps {{{
+check_deps igDEPS "$igNAME"
+# }}}
+
+## custom functions {{{
+
+hashmap_to_file() { # {{{
+	local -n hashmap="$1"
+	local outfile="$2"
+
+	local key value
+	for key in "${!hashmap[@]}"; do
+		value="${hashmap[$key]}"
+		echo "${key}=${value}" >> "$outfile"
+	done
+} # }}}
+
+add_gradle_properties() { # {{{
+	local -A nexus_properties=( [nexusUrl]="$1"
+	                            [nexusUsername]="$2"
+	                            [nexusPassword]="$3" )
+
+	local outfile="gradle.properties"
+
+	hashmap_to_file nexus_properties "$outfile"
+
+	if [[ ! -f "${outfile}" ]]; then
+		slog "'${outfile}' not created correctly: exiting..."
+		exit 1
+	fi
+} # }}}
+
+get_nexus_gradle_properties() { # {{{
+
+	local nexusUsername nexusPassword
+	read -p "Provide nexus username: " nexusUsername
+	read -s -p "Provide nexus password: " nexusPassword ; echo
+
+	local def_nexusUrl="$(git config "${profile}".nexus || echo none)"
+	if [[ $def_nexusUrl == none ]]; then
+		local nexusUrl
+		local -a nexus_servers=($(grep -oP 'nexus\h+=\h+\K(?=http).*' "${HOME}/.gitconfig") 'new server' none)
+		local query_string="Address of the nexus server in the form 'https?://hostname(:port)?' "
+		slog -hg "Choose a nexus server to store your artifacts (or none)"
+		select nexusUrl in "${nexus_servers[@]}"; do
+			case "$nexusUrl" in
+				none)
+					break
+				;;
+				*)
+					until grep -q -oP '^https?:\/\/[^:]+(?::\d{1,5})?$' <<<"${nexusUrl}"; do
+						read -p "${query_string}" nexusUrl
+					done
+					hostname="$(grep -oP 'https?://\K[^:]+' <<<"${nexusUrl}")"
+					if reachable "${hostname}"; then
+						break
+					else
+						read -p "'$hostname' is not reachable, do you want to use it anyway? " res
+						if [[ $res =~ [yY]([eE][sS])? ]]; then
+							break
+						else
+							slog "Choose again from the numbered list above."
+						fi
+					fi
+				;;
+			esac
+		done
+	else
+		nexusUrl="${def_nexusUrl}"
+	fi
+	save_as_default nexus "$nexusUrl"
+
+	add_gradle_properties "$nexusUrl/nexus" "$nexusUsername" "$nexusPassword"
+} ## }}}
+
+add_build_gradle() { # {{{
+
+	local lbuildfile="${1}"
+	local lpackage="${2}"
+	local lversion="${3}"
+	local ldescription="${4}"
+	local lapp="${6}"
+	local lfatjar="${7}"
+	local lnexus="$8"
+
+	# test remote nexus server with groovy
+	# remember to try catch (because of java.net.UnknownHostException)
+	# if ( new URL(nexusUrl).text.contains('Sonatype Nexus') ) ...
+	# nexusUrl has to be in the format: 'http://maven.grosio.pgol.com/nexus'
+	sed 's/^|//' > "${lbuildfile}" <<- EOF
+	|/*
+	| * This build file was auto generated by '${gwNAME}'
+	| * @author $(whoami)
+	| * @date $(date +'%d-%m-%Y %H.%M')
+	| */
+	|
+	|// [plugins] this block must be the first
+	|plugins {
+	|	// support for groovy
+	|	id 'groovy'
+	|	// autogenerate eclipse project files
+	|	id 'eclipse'
+	|	// create and html index linking every report generated
+	|	id 'build-dashboard'
+	|	// view of the project (jars used, navigable source tree)
+	|	id 'project-report'
+	|	// groovy code linter
+	|	id 'codenarc'
+	|	// test code coverage plugin
+	|	id 'net.saliman.cobertura' version '2.3.2'
+	$(
+		[[ $lapp == on ]] && {
+			echo "	// add run task to execute application"
+			echo "	id 'application'"
+		}
+		[[ $lnexus == on ]] && {
+			echo "	// integration with nexus repository (and more)"
+			echo "	id 'maven'"
+		}; echo '}'
+	)
+	|
+	|// [general] configuration
+	|project.ext {
+	$(
+		echo "	groovyVersion   = '$(groovy -version|grep -m1 -oP '\b\d+[.]\d+[.]\d+\b')'"
+		echo "	gradleVersion   = '$(gradle -version|grep -oPm1 '^Gradle \K\b\d+[.]\d+[.]\d+')'"
+	)
+	|	spockVersion    = '1.0-groovy-2.4'
+	|	codenarcVersion = '0.24.1'
+	|	slf4jVersion    = '1.7.21'
+	|	log4jVersion    = '2.6.2'
+	|}
+	|
+	|project.with {
+	|	//project.name is set in the settings.gradle with rootProject.name
+	|	group                 "${lpackage}"
+	|	version               "${lversion}-SNAPSHOT" // (remove -SNAPSHOT for releases)
+	|	description           "${ldescription}"
+	|	wrapper.gradleVersion "\$gradleVersion"
+	$(
+		[[ $lapp == on ]] && { 
+			echo "	// executed if no other tasks are specified"
+			echo "	defaultTasks          'clean', 'run'"
+			echo "	// application entry point" 
+			echo "	mainClassName = 'Launcher'"
+		}; echo '}'
+	)
+	|
+	|repositories {
+	|	jcenter()
+	$(
+		[[ $lnexus == on ]] && {
+			echo
+			echo '	// testing nexus server reachability'
+			echo "	if ( new URL(nexusUrl).text.contains('Sonatype Nexus') ) {"
+			echo '		logger.warn("Adding maven repositories, nexus <$nexusUrl>")'
+			echo '		maven {'
+			echo '			url "${nexusUrl}/content/repositories/snapshots"'
+			echo '			url "${nexusUrl}/content/repositories/releases"'
+			echo '		}'
+			echo '	} else {'
+			echo '		logger.warn("maven repos skipped cause <$nexusUrl> is not reachable!")'
+			echo '	}'
+		}; echo '}'
+	)
+	|
+	|dependencies {
+	|	// Groovy language support
+	|	compile "org.codehaus.groovy:groovy-all:\$groovyVersion"
+	|
+	|	// Slf4j dependencies with log4j2 backend
+	|	compile "org.slf4j:slf4j-api:\$slf4jVersion"
+	|	compile "org.apache.logging.log4j:log4j-slf4j-impl:\$log4jVersion"
+	|	compile "org.apache.logging.log4j:log4j-api:\$log4jVersion"
+	|	compile "org.apache.logging.log4j:log4j-core:\$log4jVersion"
+	|
+	|	// We use the awesome Spock testing and specification framework
+	|	testCompile "org.spockframework:spock-core:\$spockVersion"
+	|}
+	|
+	|// codenarc groovy source analyses
+	|codenarc{
+	|	toolVersion = "\$codenarcVersion"
+	|
+	|	codenarcMain {
+	|		configFile = rootProject.file('config/codenarc/ruleset.groovy')
+	|		exclude "**/package-info.*"
+	|		ignoreFailures true       // does not block builds
+	|		maxPriority1Violations 0
+	|		maxPriority2Violations 10
+	|		maxPriority3Violations 20
+	|	}
+	|	codenarcTest {
+	|		configFile = rootProject.file('config/codenarc/ruleset-test.groovy')
+	|		ignoreFailures true
+	|		maxPriority1Violations 0
+	|		maxPriority2Violations 10
+	|		maxPriority3Violations 20
+	|	}
+	|}
+	|
+	$(
+		[[ $lnexus == on ]] && {
+			echo '// [maven] upload to http nexus configuration'
+			echo 'configurations {'
+			echo '	deployerJars'
+			echo '}'
+			echo 'dependencies {'
+			echo '	// needed to deploy on nexus via http'
+			echo '	deployerJars "org.apache.maven.wagon:wagon-http:2.+"'
+			echo '}'
+			echo 'uploadArchives {'
+			echo '	repositories.mavenDeployer {'
+			echo '		configuration = configurations.deployerJars'
+			echo '		repository(url: "${nexusUrl}/content/repositories/releases") {'
+			echo '			authentication(userName: nexusUsername, password: nexusPassword)'
+			echo '		}'
+			echo '		snapshotRepository(url: "${nexusUrl}/content/repositories/snapshots") {'
+			echo '			authentication(userName: nexusUsername, password: nexusPassword)'
+			echo '		}'
+			echo '	}'
+			echo '}'
+		}
+	)
+	|
+	|// [tasks] configuration //
+	|jar {
+	|	// execute check task when create the jar
+	|	dependsOn 'check'
+	$(
+		[[ $lfatjar == 'on' ]] && {
+			echo '	// [fatjar] include deps into the jar artifact'
+			echo '	from configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }'
+		}; echo '}'
+	)
+	|
+	|check {
+	|	// clean before check
+	|	dependsOn 'clean'
+	|	// create the code coverage report
+	|	dependsOn 'cobertura'
+	|	// set the correct order for the dep tasks
+	|	tasks.findByName('cobertura').mustRunAfter 'clean'
+	|}
+	$(
+		[[ $lapp == 'on' ]] && {
+			echo
+			echo "// gradle task 'run' (from application plugin) with params"
+			echo "// ~$ gradle run -Params='[\"first arg\",\"second arg\"]'"
+			echo 'run {'
+			echo '	enableAssertions = true'
+			echo "	if ( project.hasProperty('arams') ) {"
+			echo '		args Eval.me(arams)'
+			echo '	}'
+			echo '}'
+		}; echo
+	)
+	|// [tasks] definition
+	|task listJars << {
+	|	// print out the jars used by the project
+	|	configurations.compile.each { File file -> println file.name }
+	|}
+	|
+	|// vim: ft=groovy:fdm=indent
+	EOF
+} # }}}
+
+# }}}
+
+## add codenarc configuration files {{{
+add_codenarc_rulesets() {
+	local -r conf_path='config/codenarc'
+	local -r mainrule="${conf_path}/ruleset.groovy"
+	local -r testrule="${conf_path}/ruleset-test.groovy"
+
+	mkdir -p "$conf_path"
+
+	sed 's/^|//' > "$mainrule" <<- EOF
+	|ruleset {
+	|	description 'Main grecovery experimental'
+	|
+	|	ruleset('rulesets/basic.xml')
+	|	ruleset('rulesets/braces.xml')
+	|	ruleset('rulesets/concurrency.xml')
+	|	ruleset('rulesets/convention.xml')
+	|	ruleset('rulesets/design.xml')
+	|	ruleset('rulesets/dry.xml')
+	|	ruleset('rulesets/exceptions.xml')
+	|	ruleset('rulesets/formatting.xml') {
+	|		SpaceAroundMapEntryColon {
+	|			characterAfterColonRegex = /\h/
+	|		}
+	|	}
+	|	ruleset('rulesets/generic.xml')
+	|	ruleset('rulesets/groovyism.xml')
+	|	ruleset('rulesets/imports.xml')
+	|	ruleset('rulesets/jdbc.xml')
+	|	ruleset('rulesets/junit.xml')
+	|	ruleset('rulesets/logging.xml')
+	|	ruleset('rulesets/naming.xml')
+	|	ruleset('rulesets/security.xml')
+	|	ruleset('rulesets/size.xml')
+	|	ruleset('rulesets/unnecessary.xml')
+	|	ruleset('rulesets/unused.xml') {
+	|		'UnusedPrivateField' {
+	|				enabled = true
+	|				ignoreFieldNames = 'lastUpdated, dateCreated, serialVersionUID'
+	|		}
+	|	}
+	|}
+	EOF
+
+	sed 's/^|//' > "$testrule" <<- EOF
+	|ruleset {
+	|	description 'Test experimental'
+	|
+	|	ruleset('rulesets/basic.xml')
+	|	ruleset('rulesets/braces.xml')
+	|	ruleset('rulesets/concurrency.xml')
+	|	ruleset('rulesets/convention.xml') {
+	|		'NoDef' {
+	|			excludeRegex = /"[^"]+"/
+	|		}
+	|	}
+	|	ruleset('rulesets/design.xml')
+	|	ruleset('rulesets/dry.xml') {
+	|		DuplicateStringLiteral (enabled: false)
+	|	}
+	|	ruleset('rulesets/exceptions.xml')
+	|	ruleset('rulesets/formatting.xml')
+	|	ruleset('rulesets/generic.xml')
+	|	ruleset('rulesets/groovyism.xml')
+	|	ruleset('rulesets/imports.xml')
+	|	ruleset('rulesets/jdbc.xml')
+	|	ruleset('rulesets/junit.xml')
+	|	ruleset('rulesets/logging.xml')
+	|	ruleset('rulesets/naming.xml') {
+	|		'MethodName' enabled: false
+	|	}
+	|	ruleset('rulesets/security.xml')
+	|	ruleset('rulesets/size.xml') {
+	|		CyclomaticComplexity {
+	|			maxMethodComplexity = 25
+	|		}
+	|	}
+	|	ruleset('rulesets/unnecessary.xml') {
+	|		UnnecessaryBooleanExpression(enabled: false)
+	|	}
+	|	ruleset('rulesets/unused.xml') {
+	|		'UnusedPrivateField' {
+	|				enabled = true
+	|				ignoreFieldNames = 'lastUpdated, dateCreated, serialVersionUID'
+	|		}
+	|	}
+	|}
+	EOF
+}
+
+# }}}
+
+## add specific gitignore # {{{
+add_gitignore igTAGS
+
+sed 's/^|//' >> .gitignore <<- EOF
+
+|### ${igNAME^} ###
+|# gradle
+|gradle.properties
+|
+|# log
+|log/
+EOF
+
+# }}}
+
+## build skeleton of the project {{{
+gradle init --type groovy-library &>/dev/null
+# }}}
+
+## 2. Remove ${gradle_conf}, ${default_class}, ${default_test} {{{
+files_to_remove=("${gradle_conf}" "${default_class}" "${default_test}")
+rm "${files_to_remove[@]}"
+# }}}
+
+## 3. create resource plus and default package in main and test {{{
+dirs_to_create=("${main_dir}/${package_path}" "${test_dir}/${package_path}" "${main_rsc}")
+mkdir -p "${dirs_to_create[@]}"
+# }}}
+
+## 4. Add gradle properties with Nexus repository data (optional) {{{
+# 7.1 create custom build.gradle # {{{
+if [[ $nexus == on ]]; then
+	get_nexus_gradle_properties
+fi
+# }}}
+
+## 5. create custom ${gradle_conf}, ${default_class}, ${default_test}  {{{
+##    plus: optionally generate Launcher.${language} (if application is on)
+## -------------------------------------------------------------------
+add_library() { # {{{
+	local lmainpath="${1}"
+	local lclass="${2}"
+	local lpackage="${3}"
+	local outfile="${lmainpath}/${lclass}.${language}"
+
+	sed 's/^|//' > "${outfile}" <<- EOF
+	|package ${lpackage}
+	|
+	|import groovy.util.logging.Slf4j
+	|
+	|/**
+	| * This Groovy source file was auto generated by '${gwNAME}'
+	| * @author $(whoami)
+	| * @date $(date +'%d-%m-%Y %H.%M')
+	| */
+	|@Slf4j
+	|class ${lclass} {
+	|	/**
+	|	 * This method returns always true.
+	|	 */
+	|	Boolean some${lclass}Method() {
+	|		true
+	|	}
+	|}
+	EOF
+
+} # }}}
+
+add_library_specification() { # {{{
+	local ltestpath="${1}"
+	local lclass="${2}"
+	local lpackage="${3}"
+	local -r outfile="${ltestpath}/${lclass}Spec.${language}"
+
+	sed 's/^|//' > "$outfile" <<- EOF
+	|package ${lpackage}
+	|
+	|import spock.lang.Specification
+	|
+	|/**
+	| * This Spock specification was auto generated by '${gwNAME}'
+	| * @author $(whoami)
+	| * @date $(date +'%d-%m-%Y %H.%M')
+	| */
+	|class ${lclass}Spec extends Specification {
+	|	def "some${lclass}Method returns true"() {
+	|		setup:
+	|			${lclass} lib = new ${lclass}()
+	|		when:
+	|			Boolean result = lib.some${lclass}Method()
+	|		then:
+	|			result == true
+	|	}
+	|}
+	EOF
+	if [[ ! -f "${outfile}" ]]; then
+		slog "Launcher.${language} not created correctly: exiting..."
+		exit 1
+	fi
+} # }}}
+
+add_launcher_class() { # {{{
+	local lmain_dir="${1}"
+	local lmain_class="${2}"
+	local lpackage_name="${3}"
+
+	launcher_class="${lmain_dir}/Launcher.${language}"
+	sed 's/^|//' > "${launcher_class}" <<- EOF
+	|import groovy.util.logging.Slf4j
+	|import ${lpackage_name}.${lmain_class}
+	|
+	|/**
+	| * This class is used as entry point for the entire application.
+	| * <p>
+	| * Initially i've used an external script to accomplish this task but an internal
+	| * class has several advantages:<ul>
+	| * <li>never leave the main session of coding
+	| * <li>automatic code check as the regular class
+	| * <li>lint check (codenarc)
+	| * <li>execute with gradle through the 'application' plugin</ul>
+	| * @author $(whoami)
+	| * @date $(date +'%d-%m-%y %H.%M')
+	| */
+	|@Slf4j
+	|class Launcher {
+	|
+	|	/**
+	|	 * Entry point of the application
+	|	 */
+	|	static void main(String... args) {
+	|		// log each parameter to logs/app.log
+	|		args.each { log.info it }
+	|		assert new ${lmain_class}().some${lmain_class}Method() == true
+	|	}
+	|
+	|}
+	EOF
+	if [[ ! -f "${launcher_class}" ]]; then
+		slog "Launcher.${language} not created correctly: exiting..."
+		exit 1
+	fi
+} # }}}
+
+# 7.1 create custom build.gradle # {{{
+default_version=0.1.0
+project_version=${default_version}
+
+add_build_gradle \
+	"${gradle_conf}" \
+	"${package_name}" \
+	"${project_version}" \
+	"${description}" \
+	"${profile}" \
+	"${application}" \
+	"${fatjar}" \
+	"${nexus}"
+# unit test 7.1
+if ! gradle tasks &>/dev/null; then
+	slog "File '${gradle_conf}' not created correctly: exiting..."
+	exit 1
+fi
+# }}}
+
+# 7.2 create library / library_specification
+mainpath="${main_dir}/${package_path}"
+testpath="${test_dir}/${package_path}"
+
+add_library "${mainpath}" "${main_class}" "${package_name}"
+add_library_specification "${testpath}" "${main_class}" "${package_name}"
+# unit test 7.2
+if ! gradle test &>/dev/null; then
+	slog "Files '$main_class', '${main_class}Spec' not created correctly: exiting..."
+	exit 1
+fi
+
+# 7.3 optionally generate Launcher class
+if [[ $application == 'on' ]]; then
+	add_launcher_class "${main_dir}" "${main_class}" "${package_name}"
+fi
+# No need to test because of set -e
+# }}}
+
+## 6. Uncompress PAYLOAD (codenarc conf) into the project {{{
+## ------------------------------------------------------
+add_codenarc_rulesets
+# unit test 14.a
+conf_files=(ruleset ruleset-test)
+for f in "${conf_files[@]}"; do
+	if [[ ! -f "config/codenarc/${f}.groovy" ]]; then
+		slog "${f}.groovy not created correctly: exiting..."
+		exit 1
+	fi
+done
+# }}}
+
+## log4j configuration file {{{
+add_log4j2_conf() { # {{{
+	local outfile="${1}"
+	sed 's/^|//' > "${outfile}" <<- 'EOF'
+	|<?xml version="1.0" encoding="UTF-8"?>
+	|<Configuration status="INFO" monitorInterval="30">
+	|	<Appenders>
+	|		<Console name="Console" target="SYSTEM_OUT">
+	|			<PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n" />
+	|		</Console>
+	|		<RollingFile
+	|			name="RollingFile"
+	|			fileName="logs/app.log"
+	|			filePattern="logs/$${date:yyyy-MM}/app-%d{MM-dd-yyyy}-%i.log.gz">
+	|			<PatternLayout pattern="%d{yyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+	|			<Policies>
+	|				<SizeBasedTriggeringPolicy size="20 MB"/>
+	|			</Policies>
+	|			<DefaultRolloverStrategy max="20"/>
+	|		</RollingFile>
+	|	</Appenders>
+	|	<Loggers>
+	|		<Root level="info">
+	|			<AppenderRef ref="RollingFile"/>
+	|		</Root>
+	|	</Loggers>
+	|</Configuration>
+	EOF
+	if [[ ! -f "${log4j_conf}" ]]; then
+		slog "log4j2 conf file not '${log4j_conf}' not created correctly: exiting..."
+		exit 1
+	fi
+} # }}}
+log4j_conf="${main_rsc}/log4j2.xml"
+add_log4j2_conf "${log4j_conf}"
+# }}}
+
+## eclipse project files: .classpath, .project, .settings {{{
+gradle eclipse &>/dev/null
+# unit test 10
+for ep_file in classpath project settings; do
+	if [[ ! -e .${ep_file} ]]; then
+		slog "Generating eclipse project files failed: exiting..."
+		exit 1
+	fi
+done
+eclipse_classpath=".classpath"
+sed -i -r 's/(org.eclipse.jdt.launching.JRE_CONTAINER)[^"]+/\1/' "${eclipse_classpath}"
+# unit test 11
+if grep -q 'StandardVMType' "${eclipse_classpath}"; then
+	slog "Fix for eclipse .classpath file not applied correctly: exiting..."
+	exit 1
+fi
+# }}}
+
+# vim: ft=zsh:fdm=marker

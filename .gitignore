@@ -1,0 +1,18 @@
+# Created with 'gigawatt' using the API of https://www.gitignore.io #
+# @parameters: vim
+
+### Vim ###
+# swap
+[._]*.s[a-w][a-z]
+[._]s[a-w][a-z]
+# session
+Session.vim
+# temporary
+.netrwhist
+*~
+# auto-generated tag files
+tags
+
+### Custom ###
+# asciidoctor
+*.html

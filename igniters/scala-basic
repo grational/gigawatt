@@ -1,0 +1,27 @@
+## -------------------------------------------------------------- ##
+## @igniter: scala-basic                                          ##
+## @author: Giuseppe Ricupero                                     ##
+## @e-mail: giuseppe.ricupero@polito.it                           ##
+## @date: 10-08-2016 08.55                                        ##
+## @description: create a basic scala project using gradle --init ##
+## -------------------------------------------------------------- ##
+
+## variable initialization {{{
+readonly igNAME="${BASH_SOURCE##*/}"
+readonly -a igDEPS=(gradle)
+readonly -a igTAGS=(scala gradle vim sublimetext eclipse intellij linux osx)
+# }}}
+
+## check deps {{{
+check_deps igDEPS "$igNAME"
+# }}}
+
+## add specific gitignore # {{{
+add_gitignore igTAGS
+# }}}
+
+## build skeleton of the project {{{
+gradle init --type scala-library &>/dev/null
+# }}}
+
+# vim: ft=zsh:fdm=marker

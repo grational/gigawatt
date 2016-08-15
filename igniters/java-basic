@@ -1,0 +1,27 @@
+## -------------------------------------------------------- ##
+## @igniter: java-basic                                     ##
+## @author: Giuseppe Ricupero                               ##
+## @e-mail: giuseppe.ricupero@polito.it                     ##
+## @date: 10-08-2016 08.53                                  ##
+## @description: create a java project using gradle --init  ##
+## -------------------------------------------------------- ##
+
+## variable initialization {{{
+readonly igNAME="${BASH_SOURCE##*/}"
+readonly -a igDEPS=(gradle)
+readonly -a igTAGS=(java gradle vim sublimetext eclipse intellij linux osx)
+# }}}
+
+## check deps {{{
+check_deps igDEPS "$igNAME"
+# }}}
+
+## add specific gitignore # {{{
+add_gitignore igTAGS
+# }}}
+
+## build skeleton of the project {{{
+gradle init --type java-library &>/dev/null
+# }}}
+
+# vim: ft=zsh:fdm=marker

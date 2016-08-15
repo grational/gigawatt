@@ -1,0 +1,86 @@
+## ------------------------------------------- ##
+## @lib: git-related functions                 ##
+## @author: Giuseppe Ricupero                  ##
+## @date: 14-08-2016 17.17                     ##
+## @description:                               ##
+## every function to deal with the git backend ##
+## ------------------------------------------- ##
+
+add_gitreadme() { # {{{
+	local gitreadme="README.md"
+
+	if ! ls README.* >/dev/null 2>&1; then
+		sed 's/^|//' > "${gitreadme}" <<- EOF
+		|# ${project}
+		|
+		|"${description}
+		EOF
+		# 2.a unit test
+		if [[ ! -f "${gitreadme}" ]]; then
+			slog "${gitreadme} not created correctly: exiting..."
+			exit 1
+		fi
+	fi
+} # }}}
+
+create_git_repo() { # {{{
+	local token="$(git config "${profile}".token)"
+	local api="$(git config "${profile}".api)"
+	local backend="$(git config "${profile}".backend)"
+	local namespace_id=$(git config "${profile}".namespace-id)
+	local curl="curl -s -H 'Content-Type:application/json' \
+		-H '$(git_auth_header $backend $token)'"
+
+	case ${backend} in
+		github)
+			if [[ $namespace_id == default ]]; then
+				curl="${curl} ${api}/user/repos \
+					-d '{\"name\":\"${project}\", \
+					\"description\": \"${description}\"}'"
+			else
+				curl="${curl} ${api}/orgs/${namespace_id}/repos \
+					-d '{\"name\":\"${project}\", \
+					\"description\": \"${description}\"}'"
+			fi
+			;;
+		gitlab)
+			curl="${curl} ${api}/projects"
+			if [[ $namespace_id == default ]]; then
+				curl="${curl} -d '{\"name\":\"${project}\", \
+					\"description\": \"${description}\"}'"
+			else
+				curl="${curl} -d '{\"name\":\"${project}\", \
+					\"description\": \"${description}\", \
+					\"namespace_id\": ${namespace_id}}'"
+			fi
+			;;
+	esac
+	eval "${curl} &>/dev/null"
+	# Docs gitlab.com
+	# http://docs.gitlab.com/ce/api/projects.html
+	# curl -H "PRIVATE-TOKEN: $(git config gitlab.com.token)" -X POST \
+	# 'https://gitlab.com/api/v3/projects' --data-urlencode "name=${project}" --data-urlencode "description=${description}"
+} # }}}
+
+git_local_initialize() { # {{{
+	# Initialize the local repo
+	git init -q
+	# Adds the files in the local repository and stages them for commit.
+	# To unstage a file, use 'git reset HEAD YOUR-FILE'.
+	git add .
+	# Commits the tracked changes and prepares them to be pushed to a
+	# remote repository. To remove this commit and modify the file,
+	# use 'git reset --soft HEAD~1' and commit and add the file again.
+	git commit -m "First commit" -q
+} # }}}
+
+git_add_remote() { # {{{
+	local ssh_user="$(git config "${profile}".ssh-user)"
+	local host="$(git config "${profile}".host)"
+	local user="$(git config "${profile}".user)"
+
+	# Sets the new remote, verify with: $(git remote -v)
+	git remote add origin "${ssh_user}@${host}:${user}/${project}.git"
+} # }}}
+
+# vim: ft=zsh:fdm=marker
