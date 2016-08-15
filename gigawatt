@@ -29,7 +29,7 @@ fi
 # ------------------------------
 set -e # exit if any command has a non-zero exit status (we avoid tests)
 set -u # treat unset variables as an error
-set -x # print each command and resolve variables too before execute it (debug)
+# set -x # print each command and resolve variables too before execute it (debug)
 set -o pipefail # if any command in a pipeline fails, that return code will be used as the return code of the whole pipeline
 readonly gwFILE="$(readlink -e "$(type -P "${BASH_SOURCE}" || echo "${BASH_SOURCE}")")"
 readonly gwNAME="${gwFILE##*/}"
