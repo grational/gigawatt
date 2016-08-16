@@ -22,7 +22,8 @@ add_gitignore igTAGS
 
 ## build skeleton of the project {{{
 gradle init --type groovy-library &>/dev/null &
-no_debug spinner
+readonly pid="$!"
+no_debug spinner "$pid"
 # }}}
 
 # vim: ft=zsh:fdm=marker

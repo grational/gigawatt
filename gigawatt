@@ -253,7 +253,7 @@ fi
 ## -----------------------------
 if [[ $use_existing == off ]]; then
 	mkdir -p "${project_dir}"
-	trap destructor EXIT
+	#trap destructor EXIT
 fi
 # }}}
 

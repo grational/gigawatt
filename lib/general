@@ -493,7 +493,8 @@ add_profile() { # {{{
 gig() { # {{{
 	# parameters fs=','
 	curl -L -s https://www.gitignore.io/api/$@ &
-	no_debug spinner
+	local -r pid=$!
+	no_debug spinner "$pid"
 } # }}}
 
 add_gitignore() { #{{{

@@ -249,8 +249,8 @@ add_build_gradle() { # {{{
 	|// [general] configuration
 	|project.ext {
 	$(
-		echo "	groovyVersion   = '$(groovy -version|grep -m1 -oP '\b\d+[.]\d+[.]\d+\b')'"
-		echo "	gradleVersion   = '$(gradle -version|grep -oPm1 '^Gradle \K\b\d+[.]\d+[.]\d+')'"
+		echo "	groovyVersion   = '$(groovy -version|grep -m1 -oP '(\d+[.])+\d+(?= )')'"
+		echo "	gradleVersion   = '$(gradle -version|grep -oPm1 '^Gradle \K\b(\d+[.])+\d+\b')'"
 	)
 	|	spockVersion    = '1.0-groovy-2.4'
 	|	codenarcVersion = '0.24.1'
