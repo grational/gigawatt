@@ -1,0 +1,65 @@
+## ---------------------------------------- ##
+## @lib: bare functions                     ##
+## @author: Giuseppe Ricupero               ##
+## @date: 16-08-2016 07.06                  ##
+## @description:                            ##
+## it contains some functions used at the   ##
+## very beginning to test main requirements ##
+## ---------------------------------------- ##
+
+no_debug() { # {{{
+	local -r function="$1"; shift
+
+	if [[ $- =~ x ]]; then
+		set +x
+		"$function" "${@}"
+		set -x
+	else
+		"$function" "${@}"
+	fi
+} # }}}
+
+spinner() { # {{{
+	local pid="$1" # Process Id of the previous running command
+	local spin='-\|/'
+	local i=0
+
+	while kill -0 $pid 2>/dev/null; do
+		i=$(( (i+1) %5 ))
+		printf "\r${spin:$i:1}"
+		sleep .1
+	done
+	printf "\r\0"
+} # }}}
+
+check_deps() { # {{{
+	local -n deps="$1"
+	local name="$2"
+
+	set +u
+	local com
+	for com in "${deps[@]}"; do
+		if ! command -v "$com" >/dev/null 2>&1; then
+			echo >&2 "'${com}' executable is required to run ${name}. Aborting."
+			exit 1
+		fi
+	done
+	set -u
+} # }}}
+
+reachable() { # {{{
+	local -r host="$1"
+	local -r timeout="${2:-40}"
+	local -r count="${3:-4}"
+	timeout -s SIGTERM "$timeout" ping -c"$count" "$host" >/dev/null 2>&1 &
+	local -r pid=$!
+	no_debug spinner "$pid"
+	wait "$pid"
+} # }}}
+
+destructor() {
+	local temp_project_dir="/tmp/${gwNAME}/${project}"
+	[[ -d $temp_project_dir ]] && rm -rf "${temp_project_dir}"
+}
+
+# vim: ft=zsh:fdm=marker

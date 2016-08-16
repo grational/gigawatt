@@ -29,7 +29,6 @@ fi
 # ------------------------------
 set -e # exit if any command has a non-zero exit status (we avoid tests)
 set -u # treat unset variables as an error
-# set -x # print each command and resolve variables too before execute it (debug)
 set -o pipefail # if any command in a pipeline fails, that return code will be used as the return code of the whole pipeline
 IFS=$'\n\t'
 readonly gwFILE="$(readlink -e "$(type -P "${BASH_SOURCE}" || echo "${BASH_SOURCE}")")"
@@ -37,35 +36,19 @@ readonly gwNAME="${gwFILE##*/}"
 readonly gwDIR="${gwFILE%/*}"
 # }}}
 
+# import base functions {{{
+# ---------------------
+source "${gwDIR}/lib/base"
+# }}}
+
 # dependencies test {{{
 # -----------------
-check_deps() { # {{{
-	local -n deps="$1"
-	local name="$2"
-
-	set +u
-	local com
-	for com in "${deps[@]}"; do
-		if ! command -v "$com" >/dev/null 2>&1; then
-			echo >&2 "'${com}' executable is required to run ${name}. Aborting."
-			exit 1
-		fi
-	done
-	set -u
-} # }}}
 declare -a gwDEPS=(getopt curl sed grep ssh ssh-keygen git ping timeout)
 check_deps gwDEPS "$gwNAME"
 # }}}
 
 # general connection test {{{
 # -----------------------
-reachable() { # {{{
-	local -r host="$1"
-	local -r timeout="${2:-40}"
-	local -r count="${3:-4}"
-	timeout -s SIGTERM "$timeout" ping -c"$count" "$host" >/dev/null 2>&1
-} # }}}
-
 # yahoo servers reply to ICMP
 if ! reachable 'www.yahoo.com'; then
 	echo >&2 "'${gwNAME}' require an internet connection to work correctly. Aborting."
@@ -93,6 +76,14 @@ readonly profile_pattern='^[a-z0-9_.-]+$'
 shopt -s nocasematch
 case "$comma" in
 	create)
+		if [[ ! $param =~ $project_pattern ]]; then
+			eecho 'Project names may contains only letters and numbers separated by dash and underscore'
+			usage; exit
+		else
+			readonly project="$param"
+		fi
+		shift;shift;;
+	add)
 		if [[ ! $param =~ $project_pattern ]]; then
 			eecho 'Project names may contains only letters and numbers separated by dash and underscore'
 			usage; exit
@@ -182,12 +173,25 @@ readonly workspace="$(git config "${profile}.workspace")"
 readonly project_dir="/tmp/${gwNAME}/${project}"
 # }}}
 
-## 0. Remove potential tmp project {{{
+## 1. Test reachability of the git server backend {{{
+# yahoo servers reply to ICMP
+if [[ $versioned == on ]]; then
+	(
+		git_host="$(git config "${profile}".host)"
+		if ! reachable "$git_host"; then
+			echo >&2 "The git backend '${git_host}' is not reachable. Aborting..."
+			exit 1
+		fi
+	)
+fi
+
+# }}}
+## 2. Remove potential tmp project {{{
 ## -------------------------------
 [[ -d "${project_dir}" ]] && rm -rf "${project_dir}"
 # }}}
 
-## 1. Create project dir {{{
+## 3. Create project dir {{{
 ## ---------------------
 readonly keep_text='Keep existing project'
 readonly delete_text='Delete and create new one'
@@ -215,7 +219,7 @@ if [[ $use_existing == off ]]; then
 fi
 # }}}
 
-## 2. Enter project dir {{{
+## 4. Enter project dir {{{
 ## --------------------
 if [[ $use_existing == off ]]; then
 	cd "${project_dir}"
@@ -224,7 +228,7 @@ else
 fi
 # }}}
 
-## 3. call the chosen igniter to create the project {{{
+## 5. call the chosen igniter to create the project {{{
 ## ------------------------------------------------
 if [[ $use_existing == off ]]; then
 	[[ $igniter == off ]] && ask_igniter
@@ -233,7 +237,7 @@ if [[ $use_existing == off ]]; then
 fi
 ## }}}
 
-## 4. Create remote git repo for the project {{{
+## 6. Create remote git repo for the project {{{
 ## ------------------------------------------
 if [[ $versioned == on ]]; then
 	# source git functions
@@ -253,14 +257,14 @@ fi
 
 # }}}
 
-## 5. Actually place the project in workspace {{{
+## 7. Actually place the project in workspace {{{
 ## ------------------------------------------
 if [[ $use_existing == off ]]; then
 	mv "${project_dir}" "${workspace}"
 fi
 # }}}
 
-## 6. Print final message {{{
+## 8. Print final message {{{
 ## ----------------------
 slog -hg "Project '${project}' ignited!"
 # }}}

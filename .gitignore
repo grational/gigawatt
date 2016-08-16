@@ -17,4 +17,4 @@ tags
 # asciidoctor
 *.html
 # testing script
-test.sh
+testing
