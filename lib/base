@@ -29,7 +29,7 @@ spinner() { # {{{
 		printf "\r${spin:$i:1}"
 		sleep .1
 	done
-	printf "\r\0"
+	printf "\r \b"
 } # }}}
 
 check_deps() { # {{{

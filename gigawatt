@@ -8,10 +8,10 @@
 ##         \/  /_____/     \/             \/              ##
 ##                                                        ##
 ## Git Great Applications Wrapper                         ##
-## @version: 0.9.8b                                       ##
+## @version: 0.9.9b                                       ##
 ## @author: Giuseppe Ricupero                             ##
 ## @e-mail: <giuseppe.ricupero@polito.it>                 ##
-## @date: 15-08-2016 11.24                                ##
+## @date: 16-08-2016 15.33                                ##
 ## @description:                                          ##
 ## upload a freshly created or exising software project   ##
 ## to your favorite git backend at the speed of light!    ##
@@ -216,6 +216,7 @@ fi
 : ${use_existing:=off}
 if [[ $use_existing == off ]]; then
 	mkdir -p "${project_dir}"
+	trap destructor EXIT
 fi
 # }}}
 
