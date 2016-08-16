@@ -32,16 +32,21 @@ profile_details() { # {{{
 } # }}}
 
 usage() { # {{{
-local tail="${1:-yes}"
+	local tail="${1:-yes}"
+	echo "${gwNAME^} default profile: '$(git config "${gwNAME}.default-profile"||echo '-')'."
+	echo "(available profiles: '$(profiles | sed "s/|/', '/g" || echo '-')')"
+	echo 
+	echo "- To create a new ${gwNAME} project:"
+	echo "    $gwNAME create <project name>"
 	echo
-	echo "To create a new ${gwNAME} project:"
-	echo "  $gwNAME create <project name>"
+	echo "- To put an existing project under version control: "
+	echo "    $gwNAME add <existing project name>"
 	echo
-	echo "To put an existing project under version control: "
-	echo "  $gwNAME add <existing project name>"
+	echo "- To add a new profile:"
+	echo "    $gwNAME add-profile <profile-name>"
 	echo
-	echo "To add a new profile:"
-	echo "  $gwNAME add-profile <profile name>"
+	echo "- To view details of a profile:"
+	echo "    $gwNAME profile-details <profile-name>"
 	if [[ $tail == yes ]]; then
 		echo
 		echo "For more help, see '$gwNAME --help'."
@@ -51,7 +56,7 @@ local tail="${1:-yes}"
 gwhelp() { # {{{
 	usage notail
 	echo
-	echo '<create> options:'
+	echo '<create/add> options:'
 	echo '  [-d | --project-description] <project description>'
 	echo "  [-I | --igniter]             <$(igniters)>"
 	echo "  [-P | --profile]             <$(profiles || echo 'no profile defined')>"
