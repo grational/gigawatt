@@ -96,25 +96,39 @@ case "$comma" in
 	add-profile)
 		if [[ ! $param =~ $profile_pattern ]]; then
 			eecho 'Profile names may contains only letters, numbers plus dot, dash and underscore'
-			usage; exit 1
+			exit 1
 		elif [[ $param == nop ]]; then
-			eecho "Provide a name for the new profile."
-			usage; exit 1
+			eecho "Profile name is missing."
+			exit 1
 		elif [[ $(git config "$param".user) ]]; then
 			eecho "Profile '$param' is already used."
-			usage; exit 1
+			profiles_status
+			exit 1
 		else
 			add_profile "$param"
 			exit 0
 		fi
 		shift;shift;;
-	profile-details)
+	set-default)
 		if [[ $param == nop ]]; then
-			eecho "Provide a profile name."
-			usage; exit 1
+			eecho "Profile name is missing."
+			exit 1
 		elif [[ ! $(git config "$param".user) ]]; then
 			eecho "Profile '$param' does not exists."
-			usage; exit 1
+			exit 1
+		else
+			git config "${gwNAME}.default-profile" "$param"
+			profiles_status
+			exit 0
+		fi
+		;;
+	profile-details)
+		if [[ $param == nop ]]; then
+			eecho "Profile name is missing."
+			exit 1
+		elif [[ ! $(git config "$param".user) ]]; then
+			eecho "Profile '$param' does not exists."
+			exit 1
 		else
 			profile_details "$param"
 			exit 0

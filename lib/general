@@ -31,10 +31,14 @@ profile_details() { # {{{
 	git config --get-regexp "${profile}.*" | column -t
 } # }}}
 
-usage() { # {{{
-	local tail="${1:-yes}"
+profiles_status() { # {{{
 	echo "${gwNAME^} default profile: '$(git config "${gwNAME}.default-profile"||echo '-')'."
 	echo "(available profiles: '$(profiles | sed "s/|/', '/g" || echo '-')')"
+} # }}}
+
+usage() { # {{{
+	local tail="${1:-yes}"
+	profiles_status
 	echo 
 	echo "- To create a new ${gwNAME} project:"
 	echo "    $gwNAME create <project name>"
@@ -44,6 +48,9 @@ usage() { # {{{
 	echo
 	echo "- To add a new profile:"
 	echo "    $gwNAME add-profile <profile-name>"
+	echo
+	echo "- To change default profile:"
+	echo "    $gwNAME set-default <profile-name>"
 	echo
 	echo "- To view details of a profile:"
 	echo "    $gwNAME profile-details <profile-name>"
