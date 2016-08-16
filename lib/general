@@ -21,7 +21,14 @@ igniters() { # {{{
 } # }}}
 
 profiles() { # {{{
+	local IFS=$' \t\n'
 	join '|' $(git config "${gwNAME}.profiles")
+} # }}}
+
+profile_details() { # {{{
+	local profile="$1"
+	slog -hg "Profile '$profile' details"
+	git config --get-regexp "${profile}.*" | column -t
 } # }}}
 
 usage() { # {{{
@@ -29,6 +36,9 @@ local tail="${1:-yes}"
 	echo
 	echo "To create a new ${gwNAME} project:"
 	echo "  $gwNAME create <project name>"
+	echo
+	echo "To put an existing project under version control: "
+	echo "  $gwNAME add <existing project name>"
 	echo
 	echo "To add a new profile:"
 	echo "  $gwNAME add-profile <profile name>"
@@ -44,9 +54,8 @@ gwhelp() { # {{{
 	echo '<create> options:'
 	echo '  [-d | --project-description] <project description>'
 	echo "  [-I | --igniter]             <$(igniters)>"
-	echo "  [-P | --profile]             <$(profiles || echo 'profile name')>"
+	echo "  [-P | --profile]             <$(profiles || echo 'no profile defined')>"
 	echo '  [-U | --unversioned]'
-	exit 1
 } # }}}
 
 repeat() { # {{{

@@ -78,7 +78,7 @@ case "$comma" in
 	create)
 		if [[ ! $param =~ $project_pattern ]]; then
 			eecho 'Project names may contains only letters and numbers separated by dash and underscore'
-			usage; exit
+			usage; exit 1
 		else
 			readonly project="$param"
 		fi
@@ -86,31 +86,49 @@ case "$comma" in
 	add)
 		if [[ ! $param =~ $project_pattern ]]; then
 			eecho 'Project names may contains only letters and numbers separated by dash and underscore'
-			usage; exit
+			usage; exit 1
 		else
 			readonly project="$param"
+			versioned=on
+			use_existing=on
 		fi
 		shift;shift;;
 	add-profile)
 		if [[ ! $param =~ $profile_pattern ]]; then
 			eecho 'Profile names may contains only letters, numbers plus dot, dash and underscore'
-			usage; exit
+			usage; exit 1
 		elif [[ $param == nop ]]; then
 			eecho "Provide a name for the new profile."
-			usage; exit
+			usage; exit 1
 		elif [[ $(git config "$param".user) ]]; then
 			eecho "Profile '$param' is already used."
-			usage; exit
+			usage; exit 1
 		else
 			add_profile "$param"
 			exit 0
 		fi
 		shift;shift;;
+	list-profiles)
+		slog -hg "Currently available profiles: '$(profiles | sed "s/|/', '/g" || echo '-')'"
+		exit 0
+		;;
+	profile-details)
+		if [[ $param == nop ]]; then
+			eecho "Provide a profile name."
+			usage; exit 1
+		elif [[ ! $(git config "$param".user) ]]; then
+			eecho "Profile '$param' does not exists."
+			usage; exit 1
+		else
+			profile_details "$param"
+			exit 0
+		fi
+		;;
 	-h|--help)
-		gwhelp
+		gwhelp; exit 0
 		;;
 	*)
-		usage; exit
+		usage; exit 1
 	;;
 esac
 shopt -u nocasematch
@@ -142,7 +160,7 @@ while true; do
 			shift;shift
 			;;
 		-U|--unversioned)
-			versioned='off'
+			: "${versioned:=off}"
 			shift
 			;;
 		--)
@@ -193,34 +211,43 @@ fi
 
 ## 3. Create project dir {{{
 ## ---------------------
-readonly keep_text='Keep existing project'
-readonly delete_text='Delete and create new one'
-if [[ -d "${workspace}/${project}" ]]; then
-	slog -hg "The directory '${workspace}/${project}' already exists. Content: "
-	ls "${workspace}/${project}"
-	slog "Do you want to keep existing project or to create a new one?"
-	select answer in "$keep_text" "$delete_text" quit; do
-		case $answer in
-			"$keep_text")
-				use_existing=yes
-				break;;
-			"$delete_text")
-				rm -rf "${workspace}/${project}"
-				break;;
-			quit)
-				slog " Exiting..."
-				exit 1 ;;
-		esac
-	done
-fi
 : ${use_existing:=off}
+if [[ $use_existing == off ]]; then
+	readonly keep_text='Keep existing project'
+	readonly delete_text='Delete and create new one'
+	if [[ -d "${workspace}/${project}" ]]; then
+		slog -hg "The directory '${workspace}/${project}' already exists. Content: "
+		ls "${workspace}/${project}"
+		slog "Do you want to keep existing project or to create a new one?"
+		select answer in "$keep_text" "$delete_text" quit; do
+			case $answer in
+				"$keep_text")
+					use_existing=on
+					break;;
+				"$delete_text")
+					rm -rf "${workspace}/${project}"
+					break;;
+				quit)
+					slog " Exiting..."
+					exit 1 ;;
+			esac
+		done
+	fi
+elif [[ ! -d "${workspace}/${project}" ]]; then
+		eecho "The project '${workspace}/${project}' does not exists. Cannot add it."
+		exit 1
+fi
+# }}}
+
+## 4. Create temporary directory {{{
+## -----------------------------
 if [[ $use_existing == off ]]; then
 	mkdir -p "${project_dir}"
 	trap destructor EXIT
 fi
 # }}}
 
-## 4. Enter project dir {{{
+## 5. Enter project dir {{{
 ## --------------------
 if [[ $use_existing == off ]]; then
 	cd "${project_dir}"
@@ -229,7 +256,7 @@ else
 fi
 # }}}
 
-## 5. call the chosen igniter to create the project {{{
+## 6. call the chosen igniter to create the project {{{
 ## ------------------------------------------------
 if [[ $use_existing == off ]]; then
 	[[ $igniter == off ]] && ask_igniter
@@ -238,7 +265,7 @@ if [[ $use_existing == off ]]; then
 fi
 ## }}}
 
-## 6. Create remote git repo for the project {{{
+## 7. Create remote git repo for the project {{{
 ## ------------------------------------------
 if [[ $versioned == on ]]; then
 	# source git functions
@@ -258,14 +285,14 @@ fi
 
 # }}}
 
-## 7. Actually place the project in workspace {{{
+## 8. Actually place the project in workspace {{{
 ## ------------------------------------------
 if [[ $use_existing == off ]]; then
 	mv "${project_dir}" "${workspace}"
 fi
 # }}}
 
-## 8. Print final message {{{
+## 9. Print final message {{{
 ## ----------------------
 slog -hg "Project '${project}' ignited!"
 # }}}
