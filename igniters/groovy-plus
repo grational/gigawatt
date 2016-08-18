@@ -50,8 +50,10 @@ asks_jdk_parameters() {
 	# application
 	slog -hg 'Do you want to create an application instead of a library? (no)'
 	select REPLY in yes no; do
-		application=$REPLY
-		break
+		case $REPLY in
+			yes) application=on; break;;
+			no) application=off; break;;
+		esac
 	done
 
 	# package
@@ -72,22 +74,29 @@ asks_jdk_parameters() {
 	# fatjar
 	slog -hg 'Do you want to create a fatjar? (no)'
 	select REPLY in yes no; do
-		fatjar=$REPLY
-		break
+		case $REPLY in
+			yes) fatjar=on; break;;
+			no) fatjar=off; break;;
+		esac
 	done
 	# nexus
 	slog -hg 'Do you want to add support for a nexus server? (no)'
 	select REPLY in yes no; do
 		case $REPLY in
-			yes)
-				nexus=on
-				break;;
-			no)
-				nexus=off
-				break;;
+			yes) nexus=on; break;;
+			no) nexus=off; break;;
 		esac
 	done
 }
+
+# general connection test {{{
+# -----------------------
+# yahoo servers reply to ICMP
+if ! reachable 'www.yahoo.com'; then
+	echo >&2 "'${igNAME}' require an internet connection to work correctly. Aborting."
+	exit 1
+fi
+# }}}
 
 ## asks to customize parameters {{{
 slog -hg 'Do you want to customize parameters? (no)'
@@ -144,8 +153,8 @@ hashmap_to_file() { # {{{
 
 add_gradle_properties() { # {{{
 	local -A nexus_properties=( [nexusUrl]="$1"
-	                            [nexusUsername]="$2"
-	                            [nexusPassword]="$3" )
+	                           [nexusUsername]="$2"
+	                           [nexusPassword]="$3" )
 
 	local outfile="gradle.properties"
 
@@ -265,10 +274,10 @@ add_build_gradle() { # {{{
 	|	description           "${ldescription}"
 	|	wrapper.gradleVersion "\$gradleVersion"
 	$(
-		[[ $lapp == on ]] && { 
+		[[ $lapp == on ]] && {
 			echo "	// executed if no other tasks are specified"
 			echo "	defaultTasks          'clean', 'run'"
-			echo "	// application entry point" 
+			echo "	// application entry point"
 			echo "	mainClassName = 'Launcher'"
 		}; echo '}'
 	)
@@ -501,7 +510,7 @@ EOF
 # }}}
 
 ## build skeleton of the project {{{
-gradle init --type groovy-library &>/dev/null
+silent_gradle init --type groovy-library
 # }}}
 
 ## 2. Remove ${gradle_conf}, ${default_class}, ${default_test} {{{
@@ -641,8 +650,9 @@ add_build_gradle \
 	"${application}" \
 	"${fatjar}" \
 	"${nexus}"
+
 # unit test 7.1
-if ! gradle tasks &>/dev/null; then
+if ! silent_gradle tasks; then
 	slog "File '${gradle_conf}' not created correctly: exiting..."
 	exit 1
 fi
@@ -655,7 +665,7 @@ testpath="${test_dir}/${package_path}"
 add_library "${mainpath}" "${main_class}" "${package_name}"
 add_library_specification "${testpath}" "${main_class}" "${package_name}"
 # unit test 7.2
-if ! gradle test &>/dev/null; then
+if ! silent_gradle test; then
 	slog "Files '$main_class', '${main_class}Spec' not created correctly: exiting..."
 	exit 1
 fi
@@ -718,7 +728,7 @@ add_log4j2_conf "${log4j_conf}"
 # }}}
 
 ## eclipse project files: .classpath, .project, .settings {{{
-gradle eclipse &>/dev/null
+silent_gradle eclipse
 # unit test 10
 for ep_file in classpath project settings; do
 	if [[ ! -e .${ep_file} ]]; then

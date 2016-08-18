@@ -6,9 +6,10 @@
 // gigawatt {{{
 === gigawatt
 . [task] print a confirmation message before the actual steps of creation of the project
-. [task] add message at the end to say where the project has been created (successfully)
+. [line-through]#[task] add message at the end to say where the project has been created (successfully)#
 . [question] remove everything with a +trap+ if something goes wrong when stable (or create the project under /tmp and then move to the workspace location when finished)
-. [bug] check if the project name is already used on the git backend side
+. [line-through]#[bug] check if the project name is already used on the git backend side#
+. [bug] check if an already existing project is already under version control (functional test with git)
 . [task] add option to create new igniters (asks for multiple tags and a new command)
 . [task] split create_profile function into multiple ones
 . [task] add support to https://bitbucket.org[Bitbucket]
@@ -16,9 +17,8 @@
 
 // groovy-plus {{{
 === groovy-plus
-==== (doesn't work at the moment)
-. [task] add code in +build.gradle+ to create +gradle.properties+ file if
-   the file is missing (as when the project is just git-cloned).
+. [task] add code in +build.gradle+ to create +gradle.properties+ file if the file is missing (as when the project is just git-cloned).
+
 // }}}
 
 // NOTES {{{

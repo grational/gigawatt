@@ -26,10 +26,10 @@ spinner() { # {{{
 
 	while kill -0 $pid 2>/dev/null; do
 		i=$(( (i+1) %5 ))
-		printf "\r${spin:$i:1}"
+		printf "\r${spin:$i:1}" >&2
 		sleep .1
 	done
-	printf "\r \b"
+	printf "\r \b" >&2
 } # }}}
 
 check_deps() { # {{{

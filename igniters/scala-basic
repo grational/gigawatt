@@ -21,7 +21,7 @@ add_gitignore igTAGS
 # }}}
 
 ## build skeleton of the project {{{
-gradle init --type scala-library &>/dev/null
+silent_gradle init --type scala-library
 # }}}
 
 # vim: ft=zsh:fdm=marker

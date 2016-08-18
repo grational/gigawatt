@@ -32,14 +32,16 @@ profile_details() { # {{{
 } # }}}
 
 profiles_status() { # {{{
+	local formatted_list=$(profiles | sed "s/|/', '/g")
+	: ${formatted_list:=-}
 	echo "${gwNAME^} default profile: '$(git config "${gwNAME}.default-profile"||echo '-')'."
-	echo "(available profiles: '$(profiles | sed "s/|/', '/g" || echo '-')')"
+	echo "(available profiles: '${formatted_list}')"
 } # }}}
 
 usage() { # {{{
 	local tail="${1:-yes}"
 	profiles_status
-	echo 
+	echo
 	echo "- To create a new ${gwNAME} project:"
 	echo "    $gwNAME create <project name>"
 	echo
@@ -50,7 +52,7 @@ usage() { # {{{
 	echo "    $gwNAME add-profile <profile-name>"
 	echo
 	echo "- To change default profile:"
-	echo "    $gwNAME set-default <profile-name>"
+	echo "    $gwNAME default-profile <profile-name>"
 	echo
 	echo "- To view details of a profile:"
 	echo "    $gwNAME profile-details <profile-name>"
@@ -87,6 +89,13 @@ slog() { # {{{
 	fi
 } # }}}
 
+silent_gradle() { # {{{
+	gradle -q "${@}" &>/dev/null &
+	local -r pid="$!"
+	no_debug spinner "$pid"
+	wait "$pid"
+} # }}}
+
 git_auth_header() { # {{{
 	local backend="$1"
 	local token="$2"
@@ -105,7 +114,7 @@ git_ssh_test() { # {{{
 	local ssh_user="${1}"
 	local host="${2}"
 
-	if [[ -z "$(ssh -q -T -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=no "${ssh_user}@${host}" 2>&1)" ]]; then
+	if [[ -z "$( ssh -q -T -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=no "${ssh_user}@${host}" 2>&1 & no_debug spinner "$!" )" ]]; then
 		return 1
 	else
 		return 0
@@ -473,16 +482,18 @@ add_profile() { # {{{
 	# }}}
 
 	## asks to set as default {{{
-	slog -hg "Do you want to make '${profile}' profile the default one? (yes)"
-	select REPLY in yes no; do
-		case $REPLY in
-			yes)
-				git config --global "${gwNAME}.default-profile" "${profile}"
-				break;;
-			no)
-				break;;
-		esac
-	done
+	if [[ $(git config "${gwNAME}".default-profile) ]]; then
+		slog -hg "Do you want to make '${profile}' profile the default one? (yes)"
+		select REPLY in yes no; do
+			case $REPLY in
+				yes)
+					git config --global "${gwNAME}.default-profile" "${profile}"
+					break;;
+				no)
+					break;;
+			esac
+		done
+	fi
 	# }}}
 
 	## final message {{{
@@ -492,9 +503,7 @@ add_profile() { # {{{
 
 gig() { # {{{
 	# parameters fs=','
-	curl -L -s https://www.gitignore.io/api/$@ &
-	local -r pid=$!
-	no_debug spinner "$pid"
+	curl -L -s "https://www.gitignore.io/api/${@}" &
 } # }}}
 
 add_gitignore() { #{{{
@@ -506,13 +515,39 @@ add_gitignore() { #{{{
 	|# @parameters: ${tags[*]}
 	EOF
 
-	gig $(join ',' ${tags[@]}) | grep -v '^# Created' >> "$gif"
+	gig $(join ',' ${tags[@]}) | grep -v '^# Created' >> "$gif" &
+	no_debug spinner "$!"
 
 	# 2.a unit test
 	if [[ ! -f "$gif" ]]; then
 		slog "$gif not created correctly: exiting..."
 		exit 1
 	fi
+} # }}}
+
+git_repository_unavailable() { # {{{
+	local git_backend="$1"
+	local git_token="$2"
+	local git_api="$3"
+	local git_user="$4"
+	local lproject="$5"
+
+	local pipeline="curl -s -H '$(git_auth_header "${git_backend}" "${git_token}")'"
+	case "${git_backend}" in
+		github)
+			pipeline+=" ${git_api}/repos/${git_user}/${lproject}"
+			pipeline+=" | grep -q '\"full_name\": \"${git_user}/${lproject}\"'"
+		;;
+		gitlab)
+			pipeline+=" ${git_api}/projects/owned"
+			pipeline+=" | grep -q '\"path_with_namespace\":\"${git_user}/${lproject}\"'"
+		;;
+	esac
+
+	eval ${pipeline} &
+	local pid="$!"
+	no_debug spinner "$pid"
+	wait "$pid"
 } # }}}
 
 ask_igniter() { # {{{

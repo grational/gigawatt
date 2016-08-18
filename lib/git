@@ -1,7 +1,7 @@
 ## ------------------------------------------- ##
 ## @lib: git-related functions                 ##
 ## @author: Giuseppe Ricupero                  ##
-## @date: 15-08-2016 21.07                     ##
+## @date: 18-08-2016 15.28                     ##
 ## @description:                               ##
 ## every function to deal with the git backend ##
 ## ------------------------------------------- ##
@@ -55,7 +55,8 @@ create_git_repo() { # {{{
 			fi
 			;;
 	esac
-	eval "${curl} &>/dev/null"
+	eval "${curl} &>/dev/null" &
+	no_debug spinner "$1"
 	# Docs gitlab.com
 	# http://docs.gitlab.com/ce/api/projects.html
 	# curl -H "PRIVATE-TOKEN: $(git config gitlab.com.token)" -X POST \

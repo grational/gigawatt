@@ -11,7 +11,7 @@
 ## @version: 0.9.9b                                       ##
 ## @author: Giuseppe Ricupero                             ##
 ## @e-mail: <giuseppe.ricupero@polito.it>                 ##
-## @date: 16-08-2016 15.33                                ##
+## @date: 18-08-2016 15.56                                ##
 ## @description:                                          ##
 ## upload a freshly created or exising software project   ##
 ## to your favorite git backend at the speed of light!    ##
@@ -27,13 +27,15 @@ fi
 
 # Shell settings and miscellanea {{{
 # ------------------------------
+# bash unofficial strict mode
 set -e # exit if any command has a non-zero exit status (we avoid tests)
 set -u # treat unset variables as an error
 set -o pipefail # if any command in a pipeline fails, that return code will be used as the return code of the whole pipeline
 IFS=$'\n\t'
+# absolute path of the real gigawatt executable
 readonly gwFILE="$(readlink -e "$(type -P "${BASH_SOURCE}" || echo "${BASH_SOURCE}")")"
-readonly gwNAME="${gwFILE##*/}"
-readonly gwDIR="${gwFILE%/*}"
+readonly gwNAME="${gwFILE##*/}" # basename
+readonly gwDIR="${gwFILE%/*}"   # dirname
 # }}}
 
 # import base functions {{{
@@ -47,17 +49,8 @@ declare -a gwDEPS=(getopt curl sed grep ssh ssh-keygen git ping timeout)
 check_deps gwDEPS "$gwNAME"
 # }}}
 
-# general connection test {{{
-# -----------------------
-# yahoo servers reply to ICMP
-if ! reachable 'www.yahoo.com'; then
-	echo >&2 "'${gwNAME}' require an internet connection to work correctly. Aborting."
-	exit 1
-fi
-# }}}
-
-# custom functions {{{
-# ----------------
+# general functions {{{
+# -----------------
 source ${gwDIR}/lib/general
 # }}}
 
@@ -109,7 +102,7 @@ case "$comma" in
 			exit 0
 		fi
 		shift;shift;;
-	set-default)
+	default-profile)
 		if [[ $param == nop ]]; then
 			eecho "Profile name is missing."
 			exit 1
@@ -117,7 +110,7 @@ case "$comma" in
 			eecho "Profile '$param' does not exists."
 			exit 1
 		else
-			git config "${gwNAME}.default-profile" "$param"
+			git config --global "${gwNAME}.default-profile" "$param"
 			profiles_status
 			exit 0
 		fi
@@ -179,7 +172,7 @@ while true; do
 		;;
 		*)
 			slog "Parameters error"
-			exit 1
+			gwhelp; exit 1
 		;;
 	esac
 done
@@ -189,14 +182,17 @@ done
 
 ## 0. variables initializiation {{{
 # -----------------------------
-# assign default
+# Profile
 : "${profiles:="$(profiles)"}"; : "${profiles:=\$s}" # unmatchable
 : "${profile:=$(git config "$gwNAME".default-profile)}"; : "${profile:=off}"
-: "${description:="A '$gwNAME' powered project."}"
-: "${igniter:=$(git config "$profile".default-igniter)}"; : "${igniter:=off}"
-: "${versioned:=on}"
-# Mandatory params check
 [[ ! $profile =~ ^(${profiles})$ ]] && ( slog -hg "No valid profile specified or available as default."; usage; exit 1 )
+# Igniter
+: "${igniter:=$(git config "$profile".default-igniter)}"; : "${igniter:=off}"
+# Version Control
+: "${versioned:=on}"
+# Description
+: "${description:="A '$gwNAME' powered project."}"
+#
 readonly workspace="$(git config "${profile}.workspace")"
 readonly project_dir="/tmp/${gwNAME}/${project}"
 # }}}
@@ -205,15 +201,32 @@ readonly project_dir="/tmp/${gwNAME}/${project}"
 # yahoo servers reply to ICMP
 if [[ $versioned == on ]]; then
 	(
+		git_ssh_user="$(git config "${profile}".ssh-user)"
 		git_host="$(git config "${profile}".host)"
-		if ! reachable "$git_host"; then
-			echo >&2 "The git backend '${git_host}' is not reachable. Aborting..."
+		if ! git_ssh_test "$git_ssh_user" "$git_host"; then
+			eecho "Can't login to the git backend '${git_host}'. Aborting..."
+			exit 1
+		fi
+
+		git_backend="$(git config "$profile".backend)"
+		git_token="$(git config "$profile".token)"
+		git_api="$(git config "$profile".api)"
+		git_user="$(git config "$profile".user)"
+		if git_repository_unavailable \
+			"${git_backend}" \
+			"${git_token}" \
+			"${git_api}" \
+			"${git_user}" \
+			"${project}"
+		then
+			eecho "A repository named '${project}' is already on '${git_backend}'."
+			eecho "See: ${git_host}/${git_user}/${project}"
 			exit 1
 		fi
 	)
 fi
-
 # }}}
+
 ## 2. Remove potential tmp project {{{
 ## -------------------------------
 [[ -d "${project_dir}" ]] && rm -rf "${project_dir}"
@@ -244,8 +257,13 @@ if [[ $use_existing == off ]]; then
 		done
 	fi
 elif [[ ! -d "${workspace}/${project}" ]]; then
-		eecho "The project '${workspace}/${project}' does not exists. Cannot add it."
-		exit 1
+	eecho "The project '${workspace}/${project}' does not exists. Cannot add it."
+	exit 1
+elif (cd "${workspace}/${project}" && git rev-parse --git-dir &>/dev/null); then
+	eecho "The project '${workspace}/${project}' is already versioned with git."
+	eecho "Remote list: "
+	(cd "${workspace}/${project}" && git remote -v)
+	exit 1
 fi
 # }}}
 

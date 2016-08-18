@@ -1,4 +1,4 @@
-# Created with 'gigawatt' using the API of https://www.gitignore.io #
+# Created with 'gigawatt' using the API of https://www.gitignored.io #
 # @parameters: vim
 
 ### Vim ###
@@ -17,4 +17,5 @@ tags
 # asciidoctor
 *.html
 # testing script
-testing
+test
+ignored/
