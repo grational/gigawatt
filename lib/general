@@ -536,15 +536,15 @@ git_repository_unavailable() { # {{{
 	case "${git_backend}" in
 		github)
 			pipeline+=" ${git_api}/repos/${git_user}/${lproject}"
-			pipeline+=" | grep -q '\"full_name\": \"${git_user}/${lproject}\"'"
+			pipeline+=" | tac | tac | grep -q '\"full_name\": \"${git_user}/${lproject}\"'"
 		;;
 		gitlab)
 			pipeline+=" ${git_api}/projects/owned"
-			pipeline+=" | grep -q '\"path_with_namespace\":\"${git_user}/${lproject}\"'"
+			pipeline+=" | tac | tac | grep -q '\"path_with_namespace\":\"${git_user}/${lproject}\"'"
 		;;
 	esac
 
-	eval ${pipeline} &
+	eval ${pipeline} &>/dev/null &
 	local pid="$!"
 	no_debug spinner "$pid"
 	wait "$pid"
