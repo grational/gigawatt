@@ -35,10 +35,7 @@ and follow the instructions. +gigawatt+ has sensible defaults and asks only if i
 === How to install it?
 [source,bash]
 ----
-echo 'export PATH="${HOME}/bin:${PATH}"' >> ~/.bashrc
-mkdir ~/bin && cd ~/bin
-git clone 'https://github.com/grecovery/gigawatt'
-ln -s gigawatt/gigawatt
+curl -sL http://tinyurl.com/install-gigawatt | bash
 ----
 That's it!
 
