@@ -37,13 +37,16 @@ install() {
 	[[ -d $inst_dir ]] && \
 		exitmsg 'Seems that you have already installed gigawatt. Update using:\n  cd ~/bin/github/gigawatt && git pull'
 
-	# create and add local ~/bin to PATH if needed
-	if [[ ! ${PATH} =~ $user_bin ]]; then
+	# create local path
+	[[ ! -d $user_bin ]] && mkdir "${user_bin}"
+	# add local ~/bin to PATH if needed
+	[[ ! ${PATH} =~ $user_bin ]] && \
 		printf '# gigawatt install script\nexport PATH="${HOME}/bin:${PATH}"' >> "${shell_cfg}"
-		[[ ! -d $user_bin ]] && mkdir "${user_bin}"
-	fi
+	# create ~/bin/github dir if needed
 	[[ ! -d ${ghub_dir} ]] && mkdir "${ghub_dir}"
+	# clone gigawatt repo
 	git clone 'https://github.com/grecovery/gigawatt' "$inst_dir"
+	# add a softlink to execute gigawatt
 	ln -s "$inst_dir/gigawatt" "$user_bin"
 }
 
