@@ -57,18 +57,28 @@ asks_jdk_parameters() {
 	done
 
 	# package
-	# TODO: check that the passed package name is valid
-	local def_package_name="$(default_package)"
+	local -r def_package_name="$(default_package)"
+	local -r package_pattern='^(|[a-z_]([a-z0-9_]*[.]?)*[a-z0-9_]*)$'
 	slog -hg "Do you want to change the default package? (${def_package_name})"
-	read -p '> ' package_name
+	until
+		read -p '> ' package_name
+		[[ $package_name =~ $package_pattern ]]
+	do
+		eecho "Invalid package '$package_name'. Leave blank for default."
+	done
 	: "${package_name:="${def_package_name}"}"
 	save_as_default package "$package_name"
 
 	# main class
-	# TODO: check that the passed main class name is valid
-	local def_main_class='Library'
+	local -r def_main_class='Library'
+	local -r class_pattern='^(|([A-Z][a-z0-9_]*)*)$'
 	slog -hg "Do you want to change the main library class? (${def_main_class})"
-	read -p '> ' main_class
+	until
+		read -p '> ' main_class
+		[[ $main_class =~ $class_pattern ]]
+	do
+		eecho "Invalid classname '$main_class'. Leave blank for default."
+	done
 	: "${main_class:="${def_main_class}"}"
 
 	# fatjar
@@ -79,6 +89,7 @@ asks_jdk_parameters() {
 			no) fatjar=off; break;;
 		esac
 	done
+
 	# nexus
 	slog -hg 'Do you want to add support for a nexus server? (no)'
 	select REPLY in yes no; do
@@ -175,7 +186,7 @@ get_nexus_gradle_properties() { # {{{
 	local def_nexusUrl="$(git config "${profile}".nexus || echo none)"
 	if [[ $def_nexusUrl == none ]]; then
 		local nexusUrl
-		local -a nexus_servers=($(grep -oP 'nexus\h+=\h+\K(?=http).*' "${HOME}/.gitconfig") 'new server' none)
+		local -a nexus_servers=($(grep -oP 'nexus\h+=\h+\K(?=http).*' "${HOME}/.gitconfig" | uniq) 'new server' none)
 		local query_string="Address of the nexus server in the form 'https?://hostname(:port)?' "
 		slog -hg "Choose a nexus server to store your artifacts (or none)"
 		select nexusUrl in "${nexus_servers[@]}"; do

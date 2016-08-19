@@ -8,28 +8,30 @@ v.0.9.9
 // gigawatt {{{
 === gigawatt
 . [task] print a confirmation message before the actual steps of creation of the project
+. [task] split create_profile function into multiple ones
+. [task] add option to create new igniters (asks for multiple tags and a new command)
+. [task] remove everything with a +trap+ if something goes wrong when stable (or create the project under /tmp and then move to the workspace location when finished)
+. [line-through]#[task] add support to https://bitbucket.org[Bitbucket]#
+. [line-through]#[task] test create repository under organization for github.com#
+. [line-through]#[task] test create repository under tean for bitbucket.org#
+. [line-through]#generate token on the backend automatically (with user credentials)#
 . [line-through]#[task] add message at the end to say where the project has been created (successfully)#
-. [question] remove everything with a +trap+ if something goes wrong when stable (or create the project under /tmp and then move to the workspace location when finished)
 . [line-through]#[bug] check if the project name is already used on the git backend side#
 . [line-through]#[bug] check if an already existing project is already under version control (functional test with git)#
-. [task] add option to create new igniters (asks for multiple tags and a new command)
-. [task] split create_profile function into multiple ones
-. [task] add support to https://bitbucket.org[Bitbucket]
-. [task] change source to execute in a subshell for igniters, export needed variables or pass them as parameters
-. [task] add regex check for class name and package name
 // }}}
 
 // groovy-plus {{{
 === groovy-plus
 . [task] add .travis.yml to enable continuos integration (at least on github for sure)
 . [task] add code in +build.gradle+ to create +gradle.properties+ file if the file is missing (as when the project is just git-cloned).
+. [line-through]#[task] add regex check for class name and package name#
 
 // }}}
 
 // FUTURE {{{
 === FUTURE
+* change source to execute in a subshell for igniters: pass variables using export or as parameters 
 * create an account on the supported backend (semi-)automatically
-* generate token on the backend automatically (with user credentials)
 * use +/bin/sh+ to be portable on other OS. When ready execute:
 
  checkbashism -npx < <(\

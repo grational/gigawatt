@@ -24,43 +24,54 @@ add_gitreadme() { # {{{
 } # }}}
 
 create_git_repo() { # {{{
-	local token="$(git config "${profile}".token)"
-	local api="$(git config "${profile}".api)"
-	local backend="$(git config "${profile}".backend)"
-	local namespace_id=$(git config "${profile}".namespace-id)
-	local curl="curl -s -H 'Content-Type:application/json' \
-		-H '$(git_auth_header $backend $token)'"
+	local luser="$1"
+	local lpassword="$2"
+	local ltoken="$3"
+	local lapi="$4"
+	local lbackend="$5"
+	local lnamespace_id="$6"
+	local lproject="$7"
+	local ldescription="$8"
 
-	case ${backend} in
+	local curl="curl -s -H 'Content-Type: application/json'"
+	case ${lbackend} in
 		github)
-			if [[ $namespace_id == default ]]; then
-				curl="${curl} ${api}/user/repos \
-					-d '{\"name\":\"${project}\", \
-					\"description\": \"${description}\"}'"
+			curl+=" -H '$(git_auth_header $lbackend $ltoken)'"
+			if [[ $lnamespace_id == default ]]; then
+				curl+=" ${lapi}/user/repos \
+					-d '{\"name\":\"${lproject}\", \
+					\"description\": \"${ldescription}\"}'"
 			else
-				curl="${curl} ${api}/orgs/${namespace_id}/repos \
-					-d '{\"name\":\"${project}\", \
-					\"description\": \"${description}\"}'"
+				curl+=" ${lapi}/orgs/${lnamespace_id}/repos \
+					-d '{\"name\":\"${lproject}\", \
+					\"description\": \"${ldescription}\"}'"
 			fi
 			;;
 		gitlab)
-			curl="${curl} ${api}/projects"
-			if [[ $namespace_id == default ]]; then
-				curl="${curl} -d '{\"name\":\"${project}\", \
-					\"description\": \"${description}\"}'"
+			curl+=" -H '$(git_auth_header $lbackend $ltoken)' ${lapi}/projects"
+			if [[ $lnamespace_id == default ]]; then
+				curl+=" -d '{\"name\":\"${lproject}\", \
+					\"description\": \"${ldescription}\"}'"
 			else
-				curl="${curl} -d '{\"name\":\"${project}\", \
-					\"description\": \"${description}\", \
-					\"namespace_id\": ${namespace_id}}'"
+				curl+=" -d '{\"name\":\"${lproject}\", \
+					\"description\": \"${ldescription}\", \
+					\"namespace_id\": \"${lnamespace_id}\"}'"
 			fi
+			;;
+		bitbucket)
+			curl+=" -u '${luser}:${lpassword}'"
+			if [[ $lnamespace_id == default ]]; then
+				curl+=" ${lapi}/2.0/repositories/${luser}/${lproject}"
+			else
+				curl+=" ${lapi}/2.0/repositories/${lnamespace_id}/${lproject}"
+			fi
+			curl+=" -d '{\"name\":\"${lproject}\", \
+				\"description\": \"${ldescription}\", \
+				\"scm\": \"git\"}'"
 			;;
 	esac
 	eval "${curl} &>/dev/null" &
-	no_debug spinner "$1"
-	# Docs gitlab.com
-	# http://docs.gitlab.com/ce/api/projects.html
-	# curl -H "PRIVATE-TOKEN: $(git config gitlab.com.token)" -X POST \
-	# 'https://gitlab.com/api/v3/projects' --data-urlencode "name=${project}" --data-urlencode "description=${description}"
+	no_debug spinner "$!"
 } # }}}
 
 git_local_initialize() { # {{{
@@ -76,12 +87,13 @@ git_local_initialize() { # {{{
 } # }}}
 
 git_add_remote() { # {{{
-	local ssh_user="$(git config "${profile}".ssh-user)"
-	local host="$(git config "${profile}".host)"
-	local user="$(git config "${profile}".user)"
+	local lssh_user="$1"
+	local lhost="$2"
+	local lscope="$3"
+	local lproject="$4"
 
 	# Sets the new remote, verify with: $(git remote -v)
-	git remote add origin "${ssh_user}@${host}:${user}/${project}.git"
+	git remote add origin "${lssh_user}@${lhost}:${lscope}/${lproject}.git"
 } # }}}
 
 # vim: ft=zsh:fdm=marker
