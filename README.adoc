@@ -1,5 +1,5 @@
 //== GIGAWATT: 'Git Great Applications Wrapper'
-image::img/logo.png[float="text-right"]
+image::img/logo.png[float="right"]
 
 == What is Gigawatt?
 A boilerplate killer: create new software applications and place them under 'git' version control at the speed of light! 
@@ -52,5 +52,4 @@ An +igniter+ generate the project template and add an appropriate +.gitignore+ f
 
 === Platforms
 
-* Tested
-** Linux (works under any debian-based distribution)
+* Linux (works under any debian-based distribution)
