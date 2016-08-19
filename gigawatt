@@ -11,7 +11,7 @@
 ## @version: 0.9.9b                                       ##
 ## @author: Giuseppe Ricupero                             ##
 ## @e-mail: <giuseppe.ricupero@polito.it>                 ##
-## @date: 18-08-2016 15.56                                ##
+## @date: 19-08-2016 15.55                                ##
 ## @description:                                          ##
 ## upload a freshly created or exising software project   ##
 ## to your favorite git backend at the speed of light!    ##
@@ -94,7 +94,7 @@ case "$comma" in
 			eecho "Profile name is missing."
 			exit 1
 		elif [[ $(git config "$param".user) ]]; then
-			eecho "Profile '$param' is already used."
+			eecho "Profile '$param' is already defined."
 			profiles_status
 			exit 1
 		else
@@ -185,7 +185,7 @@ done
 # Profile
 : "${profiles:="$(profiles)"}"; : "${profiles:=\$s}" # unmatchable
 : "${profile:=$(git config "$gwNAME".default-profile)}"; : "${profile:=off}"
-[[ ! $profile =~ ^(${profiles})$ ]] && ( slog -hg "No valid profile specified or available as default."; usage; exit 1 )
+[[ ! $profile =~ ^(${profiles})$ ]] && (no_debug slog -hg "No valid profile specified or available as default."; usage; exit 1 )
 # Igniter
 : "${igniter:=$(git config "$profile".default-igniter)}"; : "${igniter:=off}"
 # Version Control
@@ -212,12 +212,16 @@ if [[ $versioned == on ]]; then
 		git_token="$(git config "$profile".token)"
 		git_api="$(git config "$profile".api)"
 		git_user="$(git config "$profile".user)"
+		git_password="$(git config "$profile".password)"
+		git_namespace_id="$(git config "$profile".namespace-id)"
 		if git_repository_unavailable \
 			"${git_backend}" \
 			"${git_token}" \
 			"${git_api}" \
 			"${git_user}" \
-			"${project}"
+			"${git_password}" \
+			"${project}" \
+			"${git_namespace_id}"
 		then
 			eecho "A repository named '${project}' is already on '${git_backend}'."
 			eecho "See: ${git_host}/${git_user}/${project}"
@@ -239,7 +243,7 @@ if [[ $use_existing == off ]]; then
 	readonly keep_text='Keep existing project'
 	readonly delete_text='Delete and create new one'
 	if [[ -d "${workspace}/${project}" ]]; then
-		slog -hg "The directory '${workspace}/${project}' already exists. Content: "
+		no_debug slog -hg "The directory '${workspace}/${project}' already exists. Content: "
 		ls "${workspace}/${project}"
 		slog "Do you want to keep existing project or to create a new one?"
 		select answer in "$keep_text" "$delete_text" quit; do
@@ -288,7 +292,7 @@ fi
 ## ------------------------------------------------
 if [[ $use_existing == off ]]; then
 	[[ $igniter == off ]] && ask_igniter
-	[[ ! $igniter =~ ^($(igniters))$ ]] && ( slog -hg "The '${igniter}' igniter is not available."; usage; exit 1 )
+	[[ ! $igniter =~ ^($(igniters))$ ]] && ( no_debug slog -hg "The '${igniter}' igniter is not available."; usage; exit 1 )
 	( source ${gwDIR}/igniters/${igniter} )
 fi
 ## }}}
@@ -298,14 +302,41 @@ fi
 if [[ $versioned == on ]]; then
 	# source git functions
 	source "${gwDIR}/lib/git"
+	ssh_user="$(git config "$profile".ssh-user)"
+	user="$(git config "$profile".user)"
+	password="$(git config "$profile".password)"
+	token="$(git config "$profile".token)"
+	host="$(git config "$profile".host)"
+	api="$(git config "$profile".api)"
+	backend="$(git config "$profile".backend)"
+	namespace_id="$(git config "$profile".namespace-id)"
+	if [[ $namespace_id == default ]]; then
+		scope="$user"
+	else
+		case $backend in
+			github|bitbucket)
+				scope="$namespace_id"
+			;;
+			gitlab)
+				scope="$user"
+			;;
+		esac
+	fi
 	# a. add README.md
 	add_gitreadme
 	# b. create remote git repo
-	create_git_repo
+	create_git_repo "$user" \
+	                "$password" \
+	                "$token" \
+	                "$api" \
+	                "$backend" \
+	                "$namespace_id" \
+	                "$project" \
+	                "$description"
 	# c. initialize local git repo
 	git_local_initialize
 	# d. link local to remote
-	git_add_remote
+	git_add_remote "$ssh_user" "$host" "$scope" "$project"
 	# e. push local files to remote
 	# git push -u origin master &>/dev/null
 	git push -u origin master
@@ -322,7 +353,7 @@ fi
 
 ## 9. Print final message {{{
 ## ----------------------
-slog -hg "Project '${project}' ignited!"
+no_debug slog -hg "Project '${project}' ignited on '${profile}'!"
 # }}}
 
 exit 0
