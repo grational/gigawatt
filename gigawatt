@@ -8,7 +8,7 @@
 ##         \/  /_____/     \/             \/              ##
 ##                                                        ##
 ## Git Great Applications Wrapper                         ##
-## @version: 0.9.9b                                       ##
+## @version: 0.10.0b                                      ##
 ## @author: Giuseppe Ricupero                             ##
 ## @e-mail: <giuseppe.ricupero@polito.it>                 ##
 ## @date: 19-08-2016 15.55                                ##
@@ -185,7 +185,7 @@ done
 # Profile
 : "${profiles:="$(profiles)"}"; : "${profiles:=\$s}" # unmatchable
 : "${profile:=$(git config "$gwNAME".default-profile)}"; : "${profile:=off}"
-[[ ! $profile =~ ^(${profiles})$ ]] && (no_debug slog -hg "No valid profile specified or available as default."; usage; exit 1 )
+[[ ! $profile =~ ^(${profiles})$ ]] && {no_debug slog -hg "No valid profile specified or available as default."; usage; exit 1; }
 # Igniter
 : "${igniter:=$(git config "$profile".default-igniter)}"; : "${igniter:=off}"
 # Version Control
@@ -292,7 +292,7 @@ fi
 ## ------------------------------------------------
 if [[ $use_existing == off ]]; then
 	[[ $igniter == off ]] && ask_igniter
-	[[ ! $igniter =~ ^($(igniters))$ ]] && ( no_debug slog -hg "The '${igniter}' igniter is not available."; usage; exit 1 )
+	[[ ! $igniter =~ ^($(igniters))$ ]] && { no_debug slog -hg "The '${igniter}' igniter is not available."; usage; exit 1; }
 	( source ${gwDIR}/igniters/${igniter} )
 fi
 ## }}}
