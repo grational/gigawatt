@@ -195,7 +195,7 @@ append_ssh_config() { # {{{
 	[[ $(wc -l < "${ssh_config}") -gt 0 ]] && echo >> "${ssh_config}"
 
 	sed 's/^|//' >> "${ssh_config}" <<- EOF
-	|Host         $git_host
+	|Host $git_host
 	|	IdentityFile $prkey_file
 	EOF
 } # }}}
@@ -284,8 +284,7 @@ add_profile() { # {{{
 	local git_backend \
 		def_git_ssh_user git_ssh_user \
 		def_git_host git_host \
-		def_git_api git_api \
-		git_password
+		git_api git_password
 	no_debug slog -hg "Supported git backends: "
 	select git_backend in "${git_backends[@]}"; do
 		case "${git_backend}" in
@@ -299,9 +298,11 @@ add_profile() { # {{{
 				def_git_host=gitlab.com
 				read -p "git host (${def_git_host}): " git_host
 				: "${git_host:=$def_git_host}" # assign default if empty
-				def_git_api=https://${git_host}/api/v3
-				read -p "git api, pay attention to http/https (${def_git_api}): " git_api
-				: "${git_api:=$def_git_api}" # assign default if empty
+				echo "Choose the protocol used by '$git_host': "
+				select protocol in http https; do
+					git_api="${protocol}://${git_host}/api/v3"
+					break
+				done
 				def_git_ssh_user=git
 				read -p "git ssh user (${def_git_ssh_user}): " git_ssh_user
 				: "${git_ssh_user:=$def_git_ssh_user}" # assign default if empty
