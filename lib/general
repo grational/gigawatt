@@ -492,7 +492,7 @@ add_profile() { # {{{
 	case "${git_backend}" in
 		github)
 			# TODO authenticate with username:password!!!
-			# curl --connect-timeout 60 -s -u 'grecovery:***REMOVED***' -G https://api.github.com/user/orgs
+			# curl --connect-timeout 60 -s -u 'grecovery:,.123stella456,.' -G https://api.github.com/user/orgs
 			orgs=$(curl --connect-timeout 60 -s -u "${git_user}:${git_password}" ${git_api}/user/orgs | grep -oP '(?<="login": ")[^"]+(?=")' || echo default)
 			if [[ $orgs != default ]]; then
 				no_debug slog -hg 'You belong at least to an organization: choose where to place your projects (default personal): '
