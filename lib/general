@@ -258,7 +258,7 @@ add_profile() { # {{{
 	local workspace
 	local workspaces=("$(find "${HOME}" -maxdepth 2 -type d -name workspace)")
 	no_debug slog -hg "Choose the workspace where to store your profile projects"
-	select workspace in "${workspaces[@]}" "${HOME}/${profile}" 'other'; do
+	select workspace in ${workspaces[@]} "${HOME}/${profile}" 'other'; do
 		if [[ $workspace == other ]]; then
 			read -p "Path to store '${profile}' projects? " workspace
 			workspace="${workspace/#\~/$HOME}"
