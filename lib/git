@@ -7,11 +7,25 @@
 ## ------------------------------------------- ##
 
 add_gitreadme() { # {{{
-	local gitreadme="README.md"
+	local ldoctype="$1"
 
-	if ! ls README.* >/dev/null 2>&1; then
+	local extension
+	case $ldoctype in
+		markdown)
+			extension=md
+			title_symbol='#'
+		;;
+		asciidoc)
+			extension=adoc
+			title_symbol='='
+		;;
+	esac
+
+	local gitreadme="README.$extension"
+
+	if [[ ! -f $gitreadme ]]; then
 		sed 's/^|//' > "${gitreadme}" <<- EOF
-		|# ${project}
+		|${title_symbol} ${project}
 		|
 		|${description}
 		EOF

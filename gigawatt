@@ -310,6 +310,7 @@ if [[ $versioned == on ]]; then
 	api="$(git config "$profile".api)"
 	backend="$(git config "$profile".backend)"
 	namespace_id="$(git config "$profile".namespace-id)"
+	doctype="$(git config "$profile".doctype)"
 	if [[ $namespace_id == default ]]; then
 		scope="$user"
 	else
@@ -323,7 +324,7 @@ if [[ $versioned == on ]]; then
 		esac
 	fi
 	# a. add README.md
-	add_gitreadme
+	add_gitreadme "$doctype"
 	# b. create remote git repo
 	create_git_repo "$user" \
 	                "$password" \

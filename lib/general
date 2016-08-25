@@ -534,6 +534,14 @@ add_profile() { # {{{
 	esac
 	# }}}
 
+	## text markup choice {{{
+	no_debug slog -hg 'Choose the document markup language to use'
+	select doctype in markdown asciidoc; do
+		git_doctype="$doctype"
+		break
+	done
+	# }}}
+
 	## save configuration {{{
 	save_gw_profile "${profile}"
 	git config --global "${profile}.workspace" "${workspace}"
@@ -546,6 +554,7 @@ add_profile() { # {{{
 	# we save above to avoid a blocking condition regarding github tokens
 	# git config --global "${profile}.token" "${git_token}"
 	git config --global "${profile}.namespace-id" "${git_namespace_id}"
+	git config --global "${profile}.doctype" "${git_doctype}"
 	# }}}
 
 	## asks to set as default {{{
