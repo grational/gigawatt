@@ -32,7 +32,7 @@ and follow the instructions. +gigawatt+ has sensible defaults and asks something
 === How to install it?
 Open your trusty bash shell and paste this:
 
- curl -s https://raw.githubusercontent.com/grecovery/gigawatt/master/install.sh | bash
+ curl -sL http://bit.ly/get-gigawatt | bash
  
 That's it!
 
