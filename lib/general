@@ -114,7 +114,7 @@ git_ssh_test() { # {{{
 	local ssh_user="${1}"
 	local host="${2}"
 
-	if [[ -z "$( ssh -q -T -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=no "${ssh_user}@${host}" 2>&1 & no_debug spinner "$!" )" ]]; then
+	if [[ -z "$( ssh -q -T -o BatchMode=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=no "${ssh_user}@${host}" 2>&1 & no_debug spinner "$!" )" ]]; then
 		return 1
 	else
 		return 0
@@ -438,7 +438,7 @@ add_profile() { # {{{
 		elif [[ $local_count -eq 0 ]] && [[ $remote_count -gt 0 ]]; then
 			# 0. print a warning message and proceed with the points a. b. c. of 'Case 1'
 			no_debug slog -hg "There are already '$remote_count' keys authorized on '$git_backend'."
-			slog "Unfortunately no keys are present on this system: creating a new key..."
+			slog "Unfortunately on this system there are no keys: creating a new one..."
 			# a. generate a new couple of private/public rsa keys
 			prkey_file="$(new_rsa_key "${git_backend}")"
 			pubkey_file="${prkey_file}.pub"
@@ -465,6 +465,8 @@ add_profile() { # {{{
 
 			# b2. no match: select between keys or new one as in 'Case 2'
 			else
+				no_debug slog -hg "There are already '$remote_count' keys authorized on '$git_backend'."
+				slog "Unfortunately none of them are available on this system: choose which key to authorize: "
 				pubkey_file="$( select_local_key local_pubkey_files "$git_backend" "$git_token" "$git_api" "$git_user" "$git_password")"
 			fi
 			prkey_file="${pubkey_file%.pub}"
@@ -561,7 +563,7 @@ add_profile() { # {{{
 	if [[ -z $(git config "${gwNAME}".default-profile) ]]; then
 		git config --global "${gwNAME}.default-profile" "${profile}"
 	else
-		no_debug slog -hg "Do you want to make '${profile}' profile the default one? (yes)"
+		no_debug slog -hg "Do you want to make '${profile}' profile the default one?"
 		select REPLY in yes no; do
 			case $REPLY in
 				yes)
