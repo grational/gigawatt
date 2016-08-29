@@ -16,6 +16,47 @@ join() { # {{{
 	echo "$*"
 } # }}}
 
+sfread() { # {{{
+	local nature="$1"
+	local prompt="$2"
+
+	local re
+	case "$nature" in
+		int)
+			re='^[0-9]+$'
+			;;
+		int+)
+			re='^[1-9][0-9]*$'
+			;;
+		int-)
+			re='^[+-]?[0-9]+$'
+			;;
+		float)
+			re='^[0-9]+([.][0-9]+)?$'
+			;;
+		float+)
+			re='^(0[.]0*[1-9][0-9]*|[1-9][0-9]*([.][0-9]+)?)$'
+			;;
+		float-)
+			re='^[+-]?[0-9]+([.][0-9]+)?$'
+			;;
+		string)
+			re='^.+$'
+			;;
+		boolean)
+			re='^(yes|no)$'
+			;;
+		*)
+			echo >&2 "nature '$nature' not recognized"
+			exit 1
+	esac
+	until
+		read -p "${prompt}: "
+		[[ $REPLY =~ $re ]]
+	do : ;done
+	echo "$REPLY"
+} # }}}
+
 igniters() { # {{{
 	join '|' $(basename -a ${gwDIR}/igniters/*)
 } # }}}

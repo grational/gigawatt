@@ -1,0 +1,1001 @@
+## ----------------------------------------------- ##
+## @igniter: lilypond-winds-section                ##
+## @author: Giuseppe Ricupero                      ##
+## @e-mail: giuseppe.ricupero@polito.it            ##
+## @date: 26-08-2016 11.00                         ##
+## @description: create a lilypond project aimed   ##
+## to write for a 5 winds section (tp,as,ts,tb,bs) ##
+## ----------------------------------------------- ##
+
+## variable initialization {{{
+readonly igNAME="${BASH_SOURCE##*/}"
+readonly -a igDEPS=(gradle)
+readonly -a igTAGS=(lilypond vim sublimetext linux osx)
+# }}}
+
+## check deps {{{
+check_deps igDEPS "$igNAME"
+# }}}
+
+## add specific gitignore # {{{
+add_gitignore igTAGS
+# }}}
+
+## custom functions {{{
+
+mKeys() { # {{{
+	local k
+	for k in a b c d e f g; do
+		echo "${k}"
+		echo "${k}#"
+		echo "${k}b"
+	done
+} # }}}
+
+get_info() { # {{{
+	local -n title="$1"
+	local -n subtitle="$2"
+	local -n composers="$3"
+	local -n year="$4"
+	local -n key="$5"
+	local -n mode="$6"
+	local -n mov_num="$7"
+	local -n mov_value="$8"
+	local -n tempo="$9"
+	# title
+	title="$(sfread string Title)"
+	# subtitle (e.g. "Bb Major - Ben L'Oncle Soul version")
+	subtitle="$(sfread string Subtitle)"
+	# author(s)
+	composers="$(sfread string composers)"
+	# year
+	year="$(sfread int Year)"
+	# key
+	echo 'key: '
+	select k in $(mKeys); do
+		case $k in
+			a|b|c|d|e|f|g)
+				key="$k"
+				break ;;
+			?\#)
+				key="${k}is"
+				break ;;
+			?b)
+				key="${k}es"
+				break ;;
+			*)
+				echo "Unexpected value for key: ${k}"
+				exit 1
+		esac
+	done
+	# mode
+	select mode in major minor; do
+		mode="\\${mode}"
+		break
+	done
+	# mov_num
+	echo 'Number of movements per bar: '
+	select mov_num in {1..16}; do
+		break
+	done
+	# mov_value
+	echo 'Value of the single movement: '
+	select mov_value in {1..16}; do
+		break
+	done
+	# tempo
+	tempo=$(sfread int+ tempo)
+} # }}}
+
+gen_targets() { # {{{
+	touch all.ly clean.ly mp3.ly
+} # }}}
+
+timestamp() { # {{{
+	date '+%d-%m-%Y %H.%M'
+} # }}}
+
+gen_global() { # {{{
+	local title="$1"
+	local subtitle="$2"
+	local composers="$3"
+	local year="$4"
+	local author="$5"
+	local key="$6"
+	local mode="$7"
+	local mov_num="$8"
+	local mov_value="$9"
+	local tempo="$10"
+	local date="$(timestamp)"
+	local lilyversion="$(lilypond -version | grep -oP 'GNU LilyPond \K\d+[.]\d+[.]\d+')"
+
+	# include/global.ly {{{
+	sed 's/^|//' > include/global.ly <<- EOF
+	|\\version "${lilyversion}"
+	|
+	|\\paper {
+	|	#(set-paper-size "a4")          % paper size
+	|	% ragged-last-bottom = ##f      % fill the page till bottom
+	|	% page-count = 1                % force to render just in 1 page
+	|	% between-system-padding = 0    % empty padding between lines
+	|}
+	|
+	|NoChords = {
+	|	\\override Score.MetronomeMark #'padding = #4
+	|}
+	|WithChords = {
+	|	\\override Score.MetronomeMark #'padding = #8
+	|}
+	|
+	|\\header {
+	|	title = \\markup \\center-align {
+	|		\\override #'(font-name . "Purisa")
+	|		\\fontsize #4 \\bold
+	|		"${title}"
+	|	}
+	|	subsubtitle = \\markup \\center-align {
+	|		\\override #'(font-name . "Arial")
+	|		"${subtitle}"
+	|	}
+	|	composer=\\markup \\center-align {
+	|		\\override #'(font-name . "Arial")
+	|		"${composers}"
+	|	}
+	|	opus = \\markup \\tiny {
+	|		\\override #'(font-name . "Arial")
+	|		"(${year})"
+	|	}
+	|	tagline = \\markup {
+	|		\\override #'(font-name . "Arial")
+	|		\\tiny \\column {
+	|			\\fill-line { "Transcription" \\italic { "${author}" }
+	|			\\fill-line { "Updated"   \\italic { "${date}" } }
+	|		}
+	|	}
+	|}
+	|
+	|global = {
+	|	\\time ${mov_num}/${mov_value}
+	|	\\key ${key} ${mode}
+	|	\\tempo ${mov_value} = ${tempo}
+	|	\\set Score.skipBars = ##t
+	|	\\set Score.countPercentRepeats = ##t
+	|	\\set Staff.hairpinToBarline = ##f
+	|}
+	EOF
+	# }}}
+
+} # }}}
+
+gen_outline() { # {{{
+	sed 's/^|//' > include/outline.ly <<- EOF
+	|outline = {
+	|	\\override DynamicLineSpanner #'staff-padding = #2
+	|
+	|	%% A %%
+	|	s1*4^\\markup {\\tiny \\bold "Intro" }
+	|	\\bar "||"
+	|	%% B %%
+	|	s1*4
+	|	\\bar "|."
+	|}
+	EOF
+} # }}}
+
+gen_makefile() { # {{{
+	local title="$1"
+
+	sed 's/^|//' > Makefile <<- EOF
+	|SONG=${title}
+	|COMPILER=lilypond
+	|
+	|score:
+	|	@\${COMPILER} score.ly
+	|	rm -f score.ps
+	|midi_score:
+	|	@\${COMPILER} midi/score.ly
+	|	mv score.midi "midi/\${SONG}.midi"
+	|	aoss timidity -A100a -in "midi/\${SONG}.midi"
+	|tp:
+	|	@\${COMPILER} tp.ly
+	|	rm -f tp.ps
+	|midi_tp:
+	|	@\${COMPILER} midi/tp.ly
+	|	mv tp.midi "midi/\${SONG}_tp.midi"
+	|	aoss timidity -A100a -in "midi/\${SONG}_tp.midi"
+	|as:
+	|	@\${COMPILER} as.ly
+	|	rm -f as.ps
+	|midi_as:
+	|	@\${COMPILER} midi/as.ly
+	|	mv as.midi "midi/\${SONG}_as.midi"
+	|	aoss timidity -A100a -in "midi/\${SONG}_as.midi"
+	|ts:
+	|	@\${COMPILER} ts.ly
+	|	rm -f ts.ps
+	|midi_ts:
+	|	@\${COMPILER} midi/ts.ly
+	|	mv ts.midi "midi/\${SONG}_ts.midi"
+	|	aoss timidity -A100a -in "midi/\${SONG}_ts.midi"
+	|tb:
+	|	@\${COMPILER} tb.ly
+	|	rm -f tb.ps
+	|midi_tb:
+	|	@\${COMPILER} midi/tb.ly
+	|	mv tb.midi "midi/\${SONG}_tb.midi"
+	|	aoss timidity -A100a -in "midi/\${SONG}_tb.midi"
+	|bs:
+	|	@\${COMPILER} bs.ly
+	|	rm -f bs.ps
+	|midi_bs:
+	|	@\${COMPILER} midi/bs.ly
+	|	mv bs.midi "midi/\${SONG}_bs.midi"
+	|	aoss timidity -A100a -in "midi/\${SONG}_bs.midi"
+	|rhythm:
+	|	@\${COMPILER} rhythm.ly
+	|	rm -f rhythm.ps
+	|midi_rhythm:
+	|	@\${COMPILER} midi/rhythm.ly
+	|	mv rhythm.midi "midi/\${SONG}_rhythm.midi"
+	|	aoss timidity -A100a -in "midi/\${SONG}_rhythm.midi"
+	|ebass:
+	|	@\${COMPILER} ebass.ly
+	|	rm -f ebass.ps
+	|midi_ebass:
+	|	@\${COMPILER} midi/ebass.ly
+	|	mv ebass.midi "midi/\${SONG}_ebass.midi"
+	|	aoss timidity -A100a -in "midi/\${SONG}_ebass.midi"
+	|mp3: wav
+	|	@lame -h "wav/\${SONG}.wav" "mp3/\${SONG}.mp3"
+	|	lame -h "wav/\${SONG}_tp.wav" "mp3/\${SONG}_tp.mp3"
+	|	lame -h "wav/\${SONG}_as.wav" "mp3/\${SONG}_as.mp3"
+	|	lame -h "wav/\${SONG}_ts.wav" "mp3/\${SONG}_ts.mp3"
+	|	lame -h "wav/\${SONG}_tb.wav" "mp3/\${SONG}_tb.mp3"
+	|	lame -h "wav/\${SONG}_bs.wav" "mp3/\${SONG}_bs.mp3"
+	|	lame -h "wav/\${SONG}_ebass.wav" "mp3/\${SONG}_ebass.mp3"
+	|wav: midi
+	|	@timidity -Ow "midi/\${SONG}.midi"
+	|	mv "midi/\${SONG}.wav" wav
+	|	timidity -Ow "midi/\${SONG}_tp.midi"
+	|	mv "midi/\${SONG}_tp.wav" wav
+	|	timidity -Ow "midi/\${SONG}_as.midi"
+	|	mv "midi/\${SONG}_as.wav" wav
+	|	timidity -Ow "midi/\${SONG}_ts.midi"
+	|	mv "midi/\${SONG}_ts.wav" wav
+	|	timidity -Ow "midi/\${SONG}_tb.midi"
+	|	mv "midi/\${SONG}_tb.wav" wav
+	|	timidity -Ow "midi/\${SONG}_bs.midi"
+	|	mv "midi/\${SONG}_bs.wav" wav
+	|	timidity -Ow "midi/\${SONG}_ebass.midi"
+	|	mv "midi/\${SONG}_ebass.wav" wav
+	|midi: audio
+	|	@mv score.midi "midi/\${SONG}.midi"
+	|	mv tp.midi "midi/\${SONG}_tp.midi"
+	|	mv as.midi "midi/\${SONG}_as.midi"
+	|	mv ts.midi "midi/\${SONG}_ts.midi"
+	|	mv tb.midi "midi/\${SONG}_tb.midi"
+	|	mv bs.midi "midi/\${SONG}_bs.midi"
+	|	mv ebass.midi "midi/\${SONG}_ebass.midi"
+	|audio:
+	|	@\${COMPILER} midi/score.ly
+	|	\${COMPILER} midi/tp.ly
+	|	\${COMPILER} midi/as.ly
+	|	\${COMPILER} midi/ts.ly
+	|	\${COMPILER} midi/tb.ly
+	|	\${COMPILER} midi/bs.ly
+	|	\${COMPILER} midi/ebass.ly
+	|
+	|all: score
+	|all: as
+	|all: ts
+	|all: tb
+	|all: bs
+	|all: tp
+	|all: rhythm
+	|all: ebass
+	|all: midi
+	|
+	|clean:
+	|	@rm -f *.pdf midi/*.midi wav/*.wav
+	|cleanall:
+	|	@rm -f *.pdf midi/*.midi wav/*.wav mp3/*.mp3
+	EOF
+} # }}}
+
+gen_score() { # {{{
+	# score.ly {{{
+	sed 's/^|//' > score.ly <<- EOF
+	|\\include "include/global.ly"
+	|\\include "include/chords.ly"
+	|\\include "include/outline.ly"
+	|\\include "include/soprano.ly"
+	|\\include "include/alto.ly"
+	|\\include "include/tenorA.ly"
+	|\\include "include/tenorB.ly"
+	|\\include "include/bass.ly"
+	|\\include "include/ebass.ly"
+	|
+	|\\header {
+	|	instrument = \\markup \\italic \\normalsize {
+	|		\\override #'(font-name . "Arial")
+	|		"Score"
+	|	}
+	|}
+	|
+	|\\score {
+	|	\\new StaffGroup <<
+	|		\\new ChordNames {
+	|			\\set chordChanges = ##t
+	|			\\chords
+	|		}
+	|		\\new Staff <<
+	|			\\clef treble
+	|			\\WithChords \\global \\outline \\soprano
+	|		>>
+	|		\\transpose c c' \\new Staff <<
+	|			\\clef treble
+	|			\\WithChords \\global \\outline \\alto
+	|		>>
+	|		\\transpose c c' \\new Staff <<
+	|			\\clef treble
+	|			\\WithChords \\global \\outline \\tenorA
+	|		>>
+	|		\\new Staff <<
+	|			\\clef bass
+	|			\\WithChords \\global \\outline \\tenorB
+	|		>>
+	|		\\transpose c c'' \\new Staff <<
+	|			\\clef treble
+	|			\\WithChords \\global \\outline \\bass
+	|		>>
+	|		% \\transpose c c' \\new Staff <<
+	|		% 	\\clef bass
+	|		% 	\\WithChords \\global \\outline \\ebass
+	|		% >>
+	|	>>
+	|	\\layout {}
+	|}
+	EOF
+	# }}}
+
+	# midi/score.ly {{{
+	sed 's/^|//' > midi/score.ly <<- EOF
+	|\\include "articulate.ly"
+	|\\include "../include/global.ly"
+	|\\include "../include/outline.ly"
+	|\\include "../include/chords.ly"
+	|\\include "../include/soprano.ly"
+	|\\include "../include/alto.ly"
+	|\\include "../include/tenorA.ly"
+	|\\include "../include/tenorB.ly"
+	|\\include "../include/bass.ly"
+	|\\include "../include/ebass.ly"
+	|
+	|\\score {
+	|	\\unfoldRepeats \\articulate
+	|	\\new StaffGroup <<
+	|		% \\new ChordNames {
+	|		% 	\\chords
+	|		% }
+	|		\\new Staff <<
+	|			\\set Staff.midiInstrument = "trumpet"
+	|			\\global \\outline \\soprano
+	|		>>
+	|		\\new Staff <<
+	|			\\set Staff.midiInstrument = "alto sax"
+	|			\\global \\outline \\alto
+	|		>>
+	|		\\new Staff <<
+	|			\\set Staff.midiInstrument = "tenor sax"
+	|			\\global \\outline \\tenorA
+	|		>>
+	|		\\new Staff <<
+	|			\\set Staff.midiInstrument = "trombone"
+	|			\\global \\outline \\tenorB
+	|		>>
+	|		\\new Staff <<
+	|			\\set Staff.midiInstrument = "baritone sax"
+	|			\\global \\outline \\bass
+	|		>>
+	|		% \\new Staff \\relative c, <<
+	|		% 	\\set Staff.midiInstrument = "electric bass (finger)"
+	|		% 	\\global \\outline \\ebass
+	|		% >>
+	|	>>
+	|	\\midi {}
+	|}
+	EOF
+	# }}}
+} # }}}
+
+gen_chords() { # {{{
+	sed 's/^|//' > include/chords.ly <<- EOF
+	|chords = \chordmode {
+	|	%% A %%
+	|	\\repeat percent 4 { c1:7 }
+	|	%% B %%
+	|	\\repeat percent 4 { f1:7 }
+	|}
+	EOF
+} # }}}
+
+gen_rhythm() { # {{{
+	# rhythm.ly {{{
+	sed 's/^|//' > rhythm.ly <<- EOF
+	|\\include "include/global.ly"
+	|\\include "include/outline.ly"
+	|\\include "include/rhythm.ly"
+	|
+	|\\header {
+	|	instrument = \\markup \\italic \\normalsize {
+	|		\\override #'(font-name . "Arial")
+	|		"Chords"
+	|	}
+	|}
+	|
+	|\\score { <<
+	|		\\new ChordNames {
+	|			\\set chordChanges = ##t
+	|			\\chordsR
+	|		}
+	|		\\new Staff \\relative c'' <<
+	|			\\clef treble
+	|			\\WithChords \\global \\rhythm \\rhythmPO
+	|		>>
+	|	>>
+	|	\\layout {}
+	|}
+	EOF
+	# }}}
+
+	# include/rhythm.ly {{{
+	sed 's/^|//' > include/rhythm.ly <<- EOF
+	|rhythm = {
+	|	\\improvisationOn
+	|	%% A %%
+	|	\\repeat percent 4 { c4 c4 c4 c4 }
+	|	%% B %%
+	|	\\repeat percent 4 { c4 c4 c4 c4 }
+	|	\\bar "|."
+	|}
+	|
+	|rhythmPO = {
+	|	\\set Staff.instrumentName = "Rhythm Section"
+	|}
+	|
+	|chordsR = \\chordmode {
+	|	%% A %%
+	|	\\repeat percent 4 { c1:7 }
+	|	%% B %%
+	|	\\repeat percent 4 { f1:7 }
+	|}
+	EOF
+	# }}}
+
+	# midi/rhythm.ly {{{
+	sed 's/^|//' > midi/rhythm.ly <<- EOF
+	|\\include "articulate.ly"
+	|\\include "../include/global.ly"
+	|\\include "../include/chords.ly"
+	|\\include "../include/outline.ly"
+	|\\include "../include/rhythm.ly"
+	|
+	|\\score {
+	|	\\unfoldRepeats \\articulate
+	|	\\new StaffGroup <<
+	|		\\new ChordNames {
+	|			\\chordsR
+	|		}
+	|		\\new Staff \\relative c'' <<
+	|			\\global \\outline \\rhythmPO
+	|		>>
+	|	>>
+	|	\\midi {}
+	|}
+	EOF
+	# }}}
+} # }}}
+
+gen_ebass() { # {{{
+	# ebass.ly {{{
+	sed 's/^|//' > ebass.ly <<- EOF
+	|\\include "include/global.ly"
+	|\\include "include/outline.ly"
+	|\\include "include/rhythm.ly"
+	|\\include "include/ebass.ly"
+	|\\include "include/chords.ly"
+	|
+	|\\header {
+	|	instrument = \\markup \\italic \\normalsize {
+	|		\\override #'(font-name . "Arial")
+	|		"Bass"
+	|	}
+	|}
+	|
+	|\\paper {
+	|	#(set-paper-size "a4")          % paper size
+	|	% ragged-last-bottom = ##f      % fill the page till bottom
+	|	% page-count = 1                % force to render just in 1 page
+	|	% between-system-padding = 0    % empty padding between lines
+	|}
+	|
+	|\\score {
+	|	<<
+	|		% \\new ChordNames {
+	|		% 	\\set chordChanges = ##t
+	|		% 	\\chords
+	|		% }
+	|		\\transpose c c' \\new Staff <<
+	|			\\clef bass
+	|			\\WithChords \\global \\rhythm \\ebass
+	|		>>
+	|		% \\transpose c c' \\new Staff <<
+	|		% 	\\clef bass
+	|		% 	\\NoChords \\global \\ebass
+	|		% >>
+	|	>>
+	|	\\layout {}
+	|}
+	EOF
+	# }}}
+
+	# include/ebass.ly {{{
+	sed 's/^|//' > include/ebass.ly <<- EOF
+	|ebass = \\relative c, {
+	|	\\set Staff.instrumentName = "Electric Bass"
+	|
+	|	%% A %%
+	|	\\repeat percent 4 { c4 c4 c4 c4 }
+	|	%% B %%
+	|	\\repeat percent 4 { f4 f4 f4 f4 }
+	|}
+	EOF
+	# }}}
+
+	# midi/ebass.ly {{{
+	sed 's/^|//' > midi/ebass.ly <<- EOF
+	|\\include "articulate.ly"
+	|\\include "../include/global.ly"
+	|\\include "../include/chords.ly"
+	|\\include "../include/outline.ly"
+	|\\include "../include/rhythm.ly"
+	|\\include "../include/ebass.ly"
+	|
+	|\\score {
+	|	\\unfoldRepeats \\articulate
+	|	\\new StaffGroup <<
+	|		% \\new ChordNames {
+	|		% 	\\AccordiR
+	|		% }
+	|		\\new Staff <<
+	|			\\set Staff.midiInstrument = "electric bass (finger)"
+	|			\\global \\outline \\ebass
+	|		>>
+	|	>>
+	|	\\midi {}
+	|}
+	EOF
+	# }}}
+} # }}}
+
+gen_tp() { # {{{
+	# tp.ly {{{
+	sed 's/^|//' > tp.ly <<- EOF
+	|\\include "include/global.ly"
+	|\\include "include/chords.ly"
+	|\\include "include/outline.ly"
+	|\\include "include/soprano.ly"
+	|
+	|\\header {
+	|	instrument = \\markup \\italic \\normalsize {
+	|		\\override #'(font-name . "Arial")
+	|		"Trumpet Bb"
+	|	}
+	|}
+	|
+	|\\score {
+	|	\\transpose c d <<
+	|		% \\new ChordNames {
+	|		% 	\\set chordChanges = ##t
+	|		% 	\\chords
+	|		% }
+	|		\\new Staff <<
+	|			\\clef treble
+	|			\\NoChords \\global \\outline \\soprano
+	|		>>
+	|	>>
+	|	\\layout {}
+	|}
+	EOF
+	# }}}
+
+	# include/soprano.ly {{{
+	sed 's/^|//' > include/soprano.ly <<- EOF
+	|soprano = \\relative c' {
+	|	\\set Staff.instrumentName = "soprano"
+	|
+	|	%% A %%
+	|	c1*4
+	|	%% B %%
+	|	f1*4
+	|}
+	EOF
+	# }}}
+
+	# midi/tp.ly {{{
+	sed 's/^|//' > midi/tp.ly <<- EOF
+	|\\include "articulate.ly"
+	|\\include "../include/global.ly"
+	|\\include "../include/chords.ly"
+	|\\include "../include/outline.ly"
+	|\\include "../include/soprano.ly"
+	|
+	|\\score {
+	|	\\unfoldRepeats \\articulate
+	|	\\new StaffGroup <<
+	|		\\new ChordNames {
+	|			\\chords
+	|		}
+	|		\\new Staff <<
+	|			\\set Staff.midiInstrument = "trumpet"
+	|			\\global \\outline \\soprano
+	|		>>
+	|	>>
+	|	\\midi {}
+	|}
+	EOF
+	# }}}
+} # }}}
+
+gen_as() { # {{{
+	# as.ly {{{
+	sed 's/^|//' > as.ly <<- EOF
+	|\\include "include/global.ly"
+	|\\include "include/chords.ly"
+	|\\include "include/outline.ly"
+	|\\include "include/alto.ly"
+	|
+	|\\header {
+	|	instrument = \\markup \\italic \\normalsize {
+	|		\\override #'(font-name . "Arial")
+	|		"Alto Sax Eb"
+	|	}
+	|}
+	|
+	|\\score {
+	|	\\transpose c a <<
+	|		% \\new ChordNames {
+	|		% 	\\set chordChanges = ##t
+	|		% 	\\chords
+	|		% }
+	|		\\new Staff <<
+	|			\\clef treble
+	|			\\NoChords \\global \\outline \\alto
+	|		>>
+	|	>>
+	|	\\layout {}
+	|}
+	EOF
+	# }}}
+
+	# include/alto.ly {{{
+	sed 's/^|//' > include/alto.ly <<- EOF
+	|alto = \\relative c' {
+	|	\\set Staff.instrumentName = "alto"
+	|
+	|	%% A %%
+	|	bes1*4
+	|	%% B %%
+	|	ees1*4
+	|}
+	EOF
+	# }}}
+
+	# midi/as.ly {{{
+	sed 's/^|//' > midi/as.ly <<- EOF
+	|\\include "articulate.ly"
+	|\\include "../include/global.ly"
+	|\\include "../include/chords.ly"
+	|\\include "../include/outline.ly"
+	|\\include "../include/alto.ly"
+	|
+	|\\score {
+	|	\\unfoldRepeats \\articulate
+	|	\\new StaffGroup <<
+	|		\\new ChordNames {
+	|			\\chords
+	|		}
+	|		\\new Staff <<
+	|			\\set Staff.midiInstrument = "alto sax"
+	|			\\global \\outline \\alto
+	|		>>
+	|	>>
+	|	\\midi {}
+	|}
+	EOF
+	# }}}
+} # }}}
+
+gen_ts() { # {{{
+	# ts.ly {{{
+	sed 's/^|//' > ts.ly <<- EOF
+	|\\include "include/global.ly"
+	|\\include "include/chords.ly"
+	|\\include "include/outline.ly"
+	|\\include "include/tenorA.ly"
+	|
+	|\\header {
+	|	instrument = \\markup \\italic \\normalsize {
+	|		\\override #'(font-name . "Arial")
+	|		"Tenor Sax Bb"
+	|	}
+	|}
+	|
+	|\\score {
+	|	\\transpose c d <<
+	|		% \\new ChordNames {
+	|		% 	\\set chordChanges = ##t
+	|		% 	\\chords
+	|		% }
+	|		\\new Staff <<
+	|			\\clef treble
+	|			\\NoChords \\global \\outline \\tenorA
+	|		>>
+	|	>>
+	|	\\layout {}
+	|}
+	EOF
+	# }}}
+
+	# include/tenorA.ly {{{
+	sed 's/^|//' > include/tenorA.ly <<- EOF
+	|tenorA = \\relative c' {
+	|	\\set Staff.instrumentName = "Tenor A"
+	|
+	|	%% A %%
+	|	g1*4
+	|	%% B %%
+	|	c1*4
+	|}
+	EOF
+	# }}}
+
+	# midi/ts.ly {{{
+	sed 's/^|//' > midi/ts.ly <<- EOF
+	|\\include "articulate.ly"
+	|\\include "../include/global.ly"
+	|\\include "../include/chords.ly"
+	|\\include "../include/outline.ly"
+	|\\include "../include/tenorA.ly"
+	|
+	|\\score {
+	|	\\unfoldRepeats \\articulate
+	|	\\new StaffGroup <<
+	|		\\new ChordNames {
+	|			\\chords
+	|		}
+	|		\\new Staff <<
+	|			\\set Staff.midiInstrument = "tenor sax"
+	|			\\global \\outline \\tenorA
+	|		>>
+	|	>>
+	|	\\midi {}
+	|}
+	EOF
+	# }}}
+} # }}}
+
+gen_tb() { # {{{
+	# tb.ly {{{
+	sed 's/^|//' > tb.ly <<- EOF
+	|\\include "include/global.ly"
+	|\\include "include/chords.ly"
+	|\\include "include/outline.ly"
+	|\\include "include/tenorB.ly"
+	|
+	|\\header {
+	|	instrument = \\markup \\italic \\normalsize {
+	|		\\override #'(font-name . "Arial")
+	|		"Tbone Bb"
+	|	}
+	|}
+	|
+	|\\score {
+	|	<<
+	|		% \\new ChordNames {
+	|		% 	\\set chordChanges = ##t
+	|		% 	\\chords
+	|		% }
+	|		\\new Staff <<
+	|			\\clef bass
+	|			\\NoChords \\global \\outline \\tenorB
+	|		>>
+	|	>>
+	|	\\layout {}
+	|}
+	EOF
+	# }}}
+
+	# include/tenorB.ly {{{
+	sed 's/^|//' > include/tenorB.ly <<- EOF
+	|tenorB = \\relative c' {
+	|	\\set Staff.instrumentName = "Tenor B"
+	|
+	|	%% A %%
+	|	e1*4
+	|	%% B %%
+	|	a1*4
+	|}
+	EOF
+	# }}}
+
+	# midi/tb.ly {{{
+	sed 's/^|//' > midi/tb.ly <<- EOF
+	|\\include "articulate.ly"
+	|\\include "../include/global.ly"
+	|\\include "../include/chords.ly"
+	|\\include "../include/outline.ly"
+	|\\include "../include/tenorB.ly"
+	|
+	|\\score {
+	|	\\unfoldRepeats \\articulate
+	|	\\new StaffGroup <<
+	|		\\new ChordNames {
+	|			\\chords
+	|		}
+	|		\\new Staff <<
+	|			\\set Staff.midiInstrument = "trombone"
+	|			\\global \\outline \\tenorB
+	|		>>
+	|	>>
+	|	\\midi {}
+	|}
+	EOF
+	# }}}
+} # }}}
+
+gen_bs() { # {{{
+	# bs.ly {{{
+	sed 's/^|//' > bs.ly <<- EOF
+	|\\include "include/global.ly"
+	|\\include "include/chords.ly"
+	|\\include "include/outline.ly"
+	|\\include "include/bass.ly"
+	|
+	|\\header {
+	|	instrument = \\markup \\italic \\normalsize {
+	|		\\override #'(font-name . "Arial")
+	|		"Bariton Sax Eb"
+	|	}
+	|}
+	|
+	|\\score {
+	|	\\transpose c a' <<
+	|		% \\new ChordNames {
+	|		% 	\\set chordChanges = ##t
+	|		% 	\\chords
+	|		% }
+	|		\\new Staff <<
+	|			\\clef treble
+	|			\\NoChords \\global \\outline \\bass
+	|		>>
+	|	>>
+	|	\\layout {}
+	|}
+	EOF
+	# }}}
+
+	# include/bass.ly {{{
+	sed 's/^|//' > include/bass.ly <<- EOF
+	|bass = \\relative c {
+	|	\\set Staff.instrumentName = "Bass"
+	|
+	|	%% A %%
+	|	c1*4
+	|	%% B %%
+	|	f1*4
+	|}
+	EOF
+	# }}}
+
+	# midi/bs.ly {{{
+	sed 's/^|//' > midi/bs.ly <<- EOF
+	|\\include "articulate.ly"
+	|\\include "../include/global.ly"
+	|\\include "../include/chords.ly"
+	|\\include "../include/outline.ly"
+	|\\include "../include/bass.ly"
+	|
+	|\\score {
+	|	\\unfoldRepeats \\articulate
+	|	\\new StaffGroup <<
+	|		\\new ChordNames {
+	|			\\chords
+	|		}
+	|		\\new Staff <<
+	|			\\set Staff.midiInstrument = "baritone sax"
+	|			\\global \\outline \\bass
+	|		>>
+	|	>>
+	|	\\midi {}
+	|}
+	EOF
+	# }}}
+} # }}}
+
+## build skeleton of the project {{{
+
+# gather song infos
+get_info title subtitle composers year key mode mov_num mov_value tempo
+
+# create subdirs
+mkdir include midi wav mp3
+# all.ly clean.ly mp3.ly
+gen_targets
+# include/global.ly
+gen_global \
+	"$title" "$subtitle" "$composers" "$year" \
+	"$gcID" "$key" "$mode" \
+	"$mov_num" "$mov_values" "$tempo"
+# include/outline.ly
+gen_outline
+# Makefile
+gen_makefile "$title"
+# score.ly, midi/score.ly
+gen_score
+# include/chords.ly
+gen_chords
+# rhythm.ly, include/rhythm.ly, midi/rhythm.ly
+gen_rhythm
+# ebass.ly, include/ebass.ly, midi/ebass,ly
+gen_ebass
+# tp.ly, include/soprano.ly, midi/tp.ly
+gen_tp
+# as.ly, include/alto.ly, midi/as.ly
+gen_as
+# ts.ly, include/tenorA.ly, midi/ts.ly
+gen_ts
+# tb.ly, include/tenorB.ly, midi/tb.ly
+gen_tb
+# bs.ly, include/basso.ly, midi/bs.ly
+gen_bs
+
+# .
+# ├── accordi.ly           -> rhythm.ly
+# ├── all.ly
+# ├── alto.ly              -> as.ly
+# ├── baritono.ly          -> bs.ly
+# ├── basso.ly             -> ebass.ly
+# ├── clean.ly
+# ├── include
+# │   ├── basso_po.ly      -> ebass.ly
+# │   ├── Chords.ly        -> chords.ly
+# │   ├── global.ly
+# │   ├── outline.ly
+# │   ├── ritmica.ly       -> rhythm.ly
+# │   ├── VoiceA.ly        -> soprano.ly
+# │   ├── VoiceB.ly        -> alto.ly
+# │   ├── VoiceC.ly        -> tenorA.ly
+# │   ├── VoiceD.ly        -> bass.ly
+# │   └── VoiceE.ly        -> tenorB.ly
+# ├── Makefile
+# ├── midi
+# │   ├── midi_accordi.ly  -> rhythm.ly
+# │   ├── midi_alto.ly     -> as.ly
+# │   ├── midi_baritono.ly -> bs.ly
+# │   ├── midi_basso.ly    -> ebass.ly
+# │   ├── midi_score.ly    -> score.ly
+# │   ├── midi_tenore.ly   -> ts.ly
+# │   ├── midi_tromba.ly   -> tp.ly
+# │   └── midi_trombone.ly -> tb.ly
+# ├── mp3
+# ├── mp3.ly
+# ├── score.ly
+# ├── tenore.ly            -> ts.ly
+# ├── tromba.ly            -> tp.ly
+# ├── trombone.ly          -> tb.ly
+# └── wav
+
+# }}}
+
+# vim: ft=sh:fdm=marker

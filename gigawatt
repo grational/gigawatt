@@ -195,6 +195,8 @@ done
 #
 readonly workspace="$(git config "${profile}.workspace")"
 readonly project_dir="/tmp/${gwNAME}/${project}"
+readonly gcID="$(git config user.name)"
+readonly gcCONTACT="$(git config user.email)"
 # }}}
 
 ## 1. Test reachability of the git server backend {{{

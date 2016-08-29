@@ -7,6 +7,8 @@ v.0.9.9
 
 // gigawatt {{{
 === gigawatt
+. [task] use an acceptable convention for global variables or pass them all to functions / igniters (
+. [task] asks name, surnane, email and store them to add a custom header in projects/readme.(md|adoc)
 . [task] print a confirmation message before the actual steps of creation of the project
 . [task] split create_profile function into multiple ones
 . [task] add option to create new igniters (asks for multiple tags and a new command)
@@ -18,6 +20,12 @@ v.0.9.9
 . [line-through]#[task] add message at the end to say where the project has been created (successfully)#
 . [line-through]#[bug] check if the project name is already used on the git backend side#
 . [line-through]#[bug] check if an already existing project is already under version control (functional test with git)#
+// }}}
+
+// lilypond {{{
+=== lilypond
+. [task] complete the plugin require gigawatt asks name, surname, e-mail data
+
 // }}}
 
 // groovy-plus {{{
