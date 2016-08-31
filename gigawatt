@@ -66,11 +66,10 @@ readonly param="${2:-nop}"
 readonly project_pattern='^([a-z][a-z0-9]*[_-]?)+$'
 readonly profile_pattern='^[a-z0-9_.-]+$'
 
-shopt -s nocasematch
 case "$comma" in
 	create)
 		if [[ ! $param =~ $project_pattern ]]; then
-			eecho 'Project names may contains only letters and numbers separated by dash and underscore'
+			eecho 'Project names may contains only lowercase letters and numbers separated by dash and underscore'
 			usage; exit 1
 		else
 			readonly project="$param"
@@ -78,7 +77,7 @@ case "$comma" in
 		shift;shift;;
 	add)
 		if [[ ! $param =~ $project_pattern ]]; then
-			eecho 'Project names may contains only letters and numbers separated by dash and underscore'
+			eecho 'Project names may contains only lowercase letters and numbers separated by dash and underscore'
 			usage; exit 1
 		else
 			readonly project="$param"
@@ -88,7 +87,7 @@ case "$comma" in
 		shift;shift;;
 	add-profile)
 		if [[ ! $param =~ $profile_pattern ]]; then
-			eecho 'Profile names may contains only letters, numbers plus dot, dash and underscore'
+			eecho 'Profile names may contains only lowercase letters, numbers plus dot, dash and underscore'
 			exit 1
 		elif [[ $param == nop ]]; then
 			eecho "Profile name is missing."
@@ -134,7 +133,6 @@ case "$comma" in
 		usage; exit 1
 	;;
 esac
-shopt -u nocasematch
 # }}}
 
 # optional parameters # {{{

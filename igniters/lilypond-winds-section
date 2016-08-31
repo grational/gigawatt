@@ -33,35 +33,35 @@ mKeys() { # {{{
 } # }}}
 
 get_info() { # {{{
-	local -n title="$1"
-	local -n subtitle="$2"
-	local -n composers="$3"
-	local -n year="$4"
-	local -n key="$5"
-	local -n mode="$6"
-	local -n mov_num="$7"
-	local -n mov_value="$8"
-	local -n tempo="$9"
+	local -n ltitle="$1"
+	local -n lsubtitle="$2"
+	local -n lcomposers="$3"
+	local -n lyear="$4"
+	local -n lkey="$5"
+	local -n lmode="$6"
+	local -n lmov_num="$7"
+	local -n lmov_value="$8"
+	local -n ltempo="$9"
 	# title
-	title="$(sfread string Title)"
+	ltitle="$(sfread string Title)"
 	# subtitle (e.g. "Bb Major - Ben L'Oncle Soul version")
-	subtitle="$(sfread string Subtitle)"
+	lsubtitle="$(sfread string Subtitle)"
 	# author(s)
-	composers="$(sfread string composers)"
+	lcomposers="$(sfread string composers)"
 	# year
-	year="$(sfread int Year)"
+	lyear="$(sfread int Year)"
 	# key
 	echo 'key: '
 	select k in $(mKeys); do
 		case $k in
 			a|b|c|d|e|f|g)
-				key="$k"
+				lkey="$k"
 				break ;;
 			?\#)
-				key="${k}is"
+				lkey="${k}is"
 				break ;;
 			?b)
-				key="${k}es"
+				lkey="${k}es"
 				break ;;
 			*)
 				echo "Unexpected value for key: ${k}"
@@ -69,22 +69,22 @@ get_info() { # {{{
 		esac
 	done
 	# mode
-	select mode in major minor; do
-		mode="\\${mode}"
+	select lmode in major minor; do
+		lmode="\\${lmode}"
 		break
 	done
 	# mov_num
 	echo 'Number of movements per bar: '
-	select mov_num in {1..16}; do
+	select lmov_num in {1..16}; do
 		break
 	done
 	# mov_value
 	echo 'Value of the single movement: '
-	select mov_value in {1..16}; do
+	select lmov_value in {1..16}; do
 		break
 	done
 	# tempo
-	tempo=$(sfread int+ tempo)
+	ltempo=$(sfread int+ tempo)
 } # }}}
 
 gen_targets() { # {{{
@@ -105,7 +105,7 @@ gen_global() { # {{{
 	local mode="$7"
 	local mov_num="$8"
 	local mov_value="$9"
-	local tempo="$10"
+	local tempo="${10}"
 	local date="$(timestamp)"
 	local lilyversion="$(lilypond -version | grep -oP 'GNU LilyPond \K\d+[.]\d+[.]\d+')"
 
@@ -148,8 +148,8 @@ gen_global() { # {{{
 	|	tagline = \\markup {
 	|		\\override #'(font-name . "Arial")
 	|		\\tiny \\column {
-	|			\\fill-line { "Transcription" \\italic { "${author}" }
-	|			\\fill-line { "Updated"   \\italic { "${date}" } }
+	|			\\fill-line { "Transcription" \\italic { "${author}" } }
+	|			\\fill-line { "Updated" \\italic { "${date}" } }
 	|		}
 	|	}
 	|}
@@ -306,7 +306,7 @@ gen_score() { # {{{
 	# score.ly {{{
 	sed 's/^|//' > score.ly <<- EOF
 	|\\include "include/global.ly"
-	|\\include "include/chords.ly"
+	|\\include "include/harmony.ly"
 	|\\include "include/outline.ly"
 	|\\include "include/soprano.ly"
 	|\\include "include/alto.ly"
@@ -326,7 +326,7 @@ gen_score() { # {{{
 	|	\\new StaffGroup <<
 	|		\\new ChordNames {
 	|			\\set chordChanges = ##t
-	|			\\chords
+	|			\\harmony
 	|		}
 	|		\\new Staff <<
 	|			\\clef treble
@@ -363,7 +363,7 @@ gen_score() { # {{{
 	|\\include "articulate.ly"
 	|\\include "../include/global.ly"
 	|\\include "../include/outline.ly"
-	|\\include "../include/chords.ly"
+	|\\include "../include/harmony.ly"
 	|\\include "../include/soprano.ly"
 	|\\include "../include/alto.ly"
 	|\\include "../include/tenorA.ly"
@@ -375,7 +375,7 @@ gen_score() { # {{{
 	|	\\unfoldRepeats \\articulate
 	|	\\new StaffGroup <<
 	|		% \\new ChordNames {
-	|		% 	\\chords
+	|		% 	\\harmony
 	|		% }
 	|		\\new Staff <<
 	|			\\set Staff.midiInstrument = "trumpet"
@@ -408,9 +408,9 @@ gen_score() { # {{{
 	# }}}
 } # }}}
 
-gen_chords() { # {{{
-	sed 's/^|//' > include/chords.ly <<- EOF
-	|chords = \chordmode {
+gen_harmony() { # {{{
+	sed 's/^|//' > include/harmony.ly <<- EOF
+	|harmony = \\chordmode {
 	|	%% A %%
 	|	\\repeat percent 4 { c1:7 }
 	|	%% B %%
@@ -429,14 +429,14 @@ gen_rhythm() { # {{{
 	|\\header {
 	|	instrument = \\markup \\italic \\normalsize {
 	|		\\override #'(font-name . "Arial")
-	|		"Chords"
+	|		"Harmony"
 	|	}
 	|}
 	|
 	|\\score { <<
 	|		\\new ChordNames {
 	|			\\set chordChanges = ##t
-	|			\\chordsR
+	|			\\harmonyR
 	|		}
 	|		\\new Staff \\relative c'' <<
 	|			\\clef treble
@@ -463,7 +463,7 @@ gen_rhythm() { # {{{
 	|	\\set Staff.instrumentName = "Rhythm Section"
 	|}
 	|
-	|chordsR = \\chordmode {
+	|harmonyR = \\chordmode {
 	|	%% A %%
 	|	\\repeat percent 4 { c1:7 }
 	|	%% B %%
@@ -476,7 +476,7 @@ gen_rhythm() { # {{{
 	sed 's/^|//' > midi/rhythm.ly <<- EOF
 	|\\include "articulate.ly"
 	|\\include "../include/global.ly"
-	|\\include "../include/chords.ly"
+	|\\include "../include/harmony.ly"
 	|\\include "../include/outline.ly"
 	|\\include "../include/rhythm.ly"
 	|
@@ -484,7 +484,7 @@ gen_rhythm() { # {{{
 	|	\\unfoldRepeats \\articulate
 	|	\\new StaffGroup <<
 	|		\\new ChordNames {
-	|			\\chordsR
+	|			\\harmonyR
 	|		}
 	|		\\new Staff \\relative c'' <<
 	|			\\global \\outline \\rhythmPO
@@ -503,7 +503,7 @@ gen_ebass() { # {{{
 	|\\include "include/outline.ly"
 	|\\include "include/rhythm.ly"
 	|\\include "include/ebass.ly"
-	|\\include "include/chords.ly"
+	|\\include "include/harmony.ly"
 	|
 	|\\header {
 	|	instrument = \\markup \\italic \\normalsize {
@@ -523,7 +523,7 @@ gen_ebass() { # {{{
 	|	<<
 	|		% \\new ChordNames {
 	|		% 	\\set chordChanges = ##t
-	|		% 	\\chords
+	|		% 	\\harmony
 	|		% }
 	|		\\transpose c c' \\new Staff <<
 	|			\\clef bass
@@ -556,7 +556,7 @@ gen_ebass() { # {{{
 	sed 's/^|//' > midi/ebass.ly <<- EOF
 	|\\include "articulate.ly"
 	|\\include "../include/global.ly"
-	|\\include "../include/chords.ly"
+	|\\include "../include/harmony.ly"
 	|\\include "../include/outline.ly"
 	|\\include "../include/rhythm.ly"
 	|\\include "../include/ebass.ly"
@@ -582,7 +582,7 @@ gen_tp() { # {{{
 	# tp.ly {{{
 	sed 's/^|//' > tp.ly <<- EOF
 	|\\include "include/global.ly"
-	|\\include "include/chords.ly"
+	|\\include "include/harmony.ly"
 	|\\include "include/outline.ly"
 	|\\include "include/soprano.ly"
 	|
@@ -597,7 +597,7 @@ gen_tp() { # {{{
 	|	\\transpose c d <<
 	|		% \\new ChordNames {
 	|		% 	\\set chordChanges = ##t
-	|		% 	\\chords
+	|		% 	\\harmony
 	|		% }
 	|		\\new Staff <<
 	|			\\clef treble
@@ -626,7 +626,7 @@ gen_tp() { # {{{
 	sed 's/^|//' > midi/tp.ly <<- EOF
 	|\\include "articulate.ly"
 	|\\include "../include/global.ly"
-	|\\include "../include/chords.ly"
+	|\\include "../include/harmony.ly"
 	|\\include "../include/outline.ly"
 	|\\include "../include/soprano.ly"
 	|
@@ -634,7 +634,7 @@ gen_tp() { # {{{
 	|	\\unfoldRepeats \\articulate
 	|	\\new StaffGroup <<
 	|		\\new ChordNames {
-	|			\\chords
+	|			\\harmony
 	|		}
 	|		\\new Staff <<
 	|			\\set Staff.midiInstrument = "trumpet"
@@ -651,7 +651,7 @@ gen_as() { # {{{
 	# as.ly {{{
 	sed 's/^|//' > as.ly <<- EOF
 	|\\include "include/global.ly"
-	|\\include "include/chords.ly"
+	|\\include "include/harmony.ly"
 	|\\include "include/outline.ly"
 	|\\include "include/alto.ly"
 	|
@@ -666,7 +666,7 @@ gen_as() { # {{{
 	|	\\transpose c a <<
 	|		% \\new ChordNames {
 	|		% 	\\set chordChanges = ##t
-	|		% 	\\chords
+	|		% 	\\harmony
 	|		% }
 	|		\\new Staff <<
 	|			\\clef treble
@@ -695,7 +695,7 @@ gen_as() { # {{{
 	sed 's/^|//' > midi/as.ly <<- EOF
 	|\\include "articulate.ly"
 	|\\include "../include/global.ly"
-	|\\include "../include/chords.ly"
+	|\\include "../include/harmony.ly"
 	|\\include "../include/outline.ly"
 	|\\include "../include/alto.ly"
 	|
@@ -703,7 +703,7 @@ gen_as() { # {{{
 	|	\\unfoldRepeats \\articulate
 	|	\\new StaffGroup <<
 	|		\\new ChordNames {
-	|			\\chords
+	|			\\harmony
 	|		}
 	|		\\new Staff <<
 	|			\\set Staff.midiInstrument = "alto sax"
@@ -720,7 +720,7 @@ gen_ts() { # {{{
 	# ts.ly {{{
 	sed 's/^|//' > ts.ly <<- EOF
 	|\\include "include/global.ly"
-	|\\include "include/chords.ly"
+	|\\include "include/harmony.ly"
 	|\\include "include/outline.ly"
 	|\\include "include/tenorA.ly"
 	|
@@ -735,7 +735,7 @@ gen_ts() { # {{{
 	|	\\transpose c d <<
 	|		% \\new ChordNames {
 	|		% 	\\set chordChanges = ##t
-	|		% 	\\chords
+	|		% 	\\harmony
 	|		% }
 	|		\\new Staff <<
 	|			\\clef treble
@@ -764,7 +764,7 @@ gen_ts() { # {{{
 	sed 's/^|//' > midi/ts.ly <<- EOF
 	|\\include "articulate.ly"
 	|\\include "../include/global.ly"
-	|\\include "../include/chords.ly"
+	|\\include "../include/harmony.ly"
 	|\\include "../include/outline.ly"
 	|\\include "../include/tenorA.ly"
 	|
@@ -772,7 +772,7 @@ gen_ts() { # {{{
 	|	\\unfoldRepeats \\articulate
 	|	\\new StaffGroup <<
 	|		\\new ChordNames {
-	|			\\chords
+	|			\\harmony
 	|		}
 	|		\\new Staff <<
 	|			\\set Staff.midiInstrument = "tenor sax"
@@ -789,7 +789,7 @@ gen_tb() { # {{{
 	# tb.ly {{{
 	sed 's/^|//' > tb.ly <<- EOF
 	|\\include "include/global.ly"
-	|\\include "include/chords.ly"
+	|\\include "include/harmony.ly"
 	|\\include "include/outline.ly"
 	|\\include "include/tenorB.ly"
 	|
@@ -804,7 +804,7 @@ gen_tb() { # {{{
 	|	<<
 	|		% \\new ChordNames {
 	|		% 	\\set chordChanges = ##t
-	|		% 	\\chords
+	|		% 	\\harmony
 	|		% }
 	|		\\new Staff <<
 	|			\\clef bass
@@ -833,7 +833,7 @@ gen_tb() { # {{{
 	sed 's/^|//' > midi/tb.ly <<- EOF
 	|\\include "articulate.ly"
 	|\\include "../include/global.ly"
-	|\\include "../include/chords.ly"
+	|\\include "../include/harmony.ly"
 	|\\include "../include/outline.ly"
 	|\\include "../include/tenorB.ly"
 	|
@@ -841,7 +841,7 @@ gen_tb() { # {{{
 	|	\\unfoldRepeats \\articulate
 	|	\\new StaffGroup <<
 	|		\\new ChordNames {
-	|			\\chords
+	|			\\harmony
 	|		}
 	|		\\new Staff <<
 	|			\\set Staff.midiInstrument = "trombone"
@@ -858,7 +858,7 @@ gen_bs() { # {{{
 	# bs.ly {{{
 	sed 's/^|//' > bs.ly <<- EOF
 	|\\include "include/global.ly"
-	|\\include "include/chords.ly"
+	|\\include "include/harmony.ly"
 	|\\include "include/outline.ly"
 	|\\include "include/bass.ly"
 	|
@@ -873,7 +873,7 @@ gen_bs() { # {{{
 	|	\\transpose c a' <<
 	|		% \\new ChordNames {
 	|		% 	\\set chordChanges = ##t
-	|		% 	\\chords
+	|		% 	\\harmony
 	|		% }
 	|		\\new Staff <<
 	|			\\clef treble
@@ -902,7 +902,7 @@ gen_bs() { # {{{
 	sed 's/^|//' > midi/bs.ly <<- EOF
 	|\\include "articulate.ly"
 	|\\include "../include/global.ly"
-	|\\include "../include/chords.ly"
+	|\\include "../include/harmony.ly"
 	|\\include "../include/outline.ly"
 	|\\include "../include/bass.ly"
 	|
@@ -910,7 +910,7 @@ gen_bs() { # {{{
 	|	\\unfoldRepeats \\articulate
 	|	\\new StaffGroup <<
 	|		\\new ChordNames {
-	|			\\chords
+	|			\\harmony
 	|		}
 	|		\\new Staff <<
 	|			\\set Staff.midiInstrument = "baritone sax"
@@ -936,15 +936,15 @@ gen_targets
 gen_global \
 	"$title" "$subtitle" "$composers" "$year" \
 	"$gcID" "$key" "$mode" \
-	"$mov_num" "$mov_values" "$tempo"
+	"$mov_num" "$mov_value" "$tempo"
 # include/outline.ly
 gen_outline
 # Makefile
 gen_makefile "$title"
 # score.ly, midi/score.ly
 gen_score
-# include/chords.ly
-gen_chords
+# include/harmony.ly
+gen_harmony
 # rhythm.ly, include/rhythm.ly, midi/rhythm.ly
 gen_rhythm
 # ebass.ly, include/ebass.ly, midi/ebass,ly
@@ -969,7 +969,7 @@ gen_bs
 # ├── clean.ly
 # ├── include
 # │   ├── basso_po.ly      -> ebass.ly
-# │   ├── Chords.ly        -> chords.ly
+# │   ├── Chords.ly        -> harmony.ly
 # │   ├── global.ly
 # │   ├── outline.ly
 # │   ├── ritmica.ly       -> rhythm.ly
