@@ -23,7 +23,7 @@ install() {
 	# check deps
 	for com in "${deps[@]}"; do
 		if ! command -v "$com" >/dev/null 2>&1; then
-			exitmsg "'${com}' executable is required to run ${name}. Aborting."
+			exitmsg "'${com}' executable is required to install gigawatt. Aborting."
 		fi
 	done
 
