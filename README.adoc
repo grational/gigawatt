@@ -30,11 +30,11 @@ For a cold start just two steps are needed.
 and follow the instructions. +gigawatt+ has sensible defaults and asks something only if it's really needed (and usually just the first time).
 
 === How to install it?
-Open your trusty bash shell and paste this:
+Copy the snippet of code below:
 
- curl -sL http://bit.ly/get-gigawatt | bash
- 
-That's it!
+ (wget -qO- http://bit.ly/get-gigawatt || curl -sL http://bit.ly/get-gigawatt) | bash
+
+Open your trusty bash shell, paste and execute it: that's all!
 
 === Profiles
 When you add your first profile, +gigawatt+ asks you some informations about your account to make possible upload code on the git backend. These informations will be stored in the git global register (usually placed under +~/.gitconfig+).
