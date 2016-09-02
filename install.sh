@@ -47,7 +47,7 @@ install() {
 	# clone gigawatt repo
 	git clone 'https://github.com/grecovery/gigawatt' "$inst_dir"
 	# add a softlink to execute gigawatt
-	ln -s "$inst_dir/gigawatt" "$user_bin"
+	ln -s "$inst_dir/gigawatt" "$user_bin"/gw
 }
 
 install

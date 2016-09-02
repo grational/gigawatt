@@ -36,6 +36,7 @@ IFS=$'\n\t'
 readonly gwFILE="$(readlink -e "$(type -P "${BASH_SOURCE}" || echo "${BASH_SOURCE}")")"
 readonly gwNAME="${gwFILE##*/}" # basename
 readonly gwDIR="${gwFILE%/*}"   # dirname
+readonly gwEXE="${0##*/}"       # actual executable used
 # }}}
 
 # import base functions {{{
