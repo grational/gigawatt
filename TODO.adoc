@@ -38,6 +38,7 @@ v.0.9.9
 
 // FUTURE {{{
 === FUTURE
+* Introduce a way to clone another repository (on all platforms) instead of creating a new one
 * change source to execute in a subshell for igniters: pass variables using export or as parameters 
 * create an account on the supported backend (semi-)automatically
 * use +/bin/sh+ to be portable on other OS. When ready execute:

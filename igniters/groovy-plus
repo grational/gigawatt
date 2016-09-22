@@ -164,8 +164,8 @@ hashmap_to_file() { # {{{
 
 add_gradle_properties() { # {{{
 	local -A nexus_properties=( [nexusUrl]="$1"
-	                           [nexusUsername]="$2"
-	                           [nexusPassword]="$3" )
+	                            [nexusUsername]="$2"
+	                            [nexusPassword]="$3" )
 
 	local outfile="gradle.properties"
 
@@ -299,14 +299,19 @@ add_build_gradle() { # {{{
 		[[ $lnexus == on ]] && {
 			echo
 			echo '	// testing nexus server reachability'
-			echo "	if ( new URL(nexusUrl).text.contains('Sonatype Nexus') ) {"
-			echo '		logger.warn("Adding maven repositories, nexus <$nexusUrl>")'
-			echo '		maven {'
-			echo '			url "${nexusUrl}/content/repositories/snapshots"'
-			echo '			url "${nexusUrl}/content/repositories/releases"'
+			echo '	try {'
+			echo "		if ( new URL(nexusUrl).text.contains('Sonatype Nexus') ) {"
+			echo '			logger.warn("Adding maven repositories, nexus <$nexusUrl>")'
+			echo '			maven {'
+			echo '				url "${nexusUrl}/content/repositories/snapshots"'
+			echo '				url "${nexusUrl}/content/repositories/releases"'
+			echo '			}'
+			echo '		} else {'
+			echo '			logger.warn("maven repos skipped cause <$nexusUrl> is not reachable!")'
 			echo '		}'
-			echo '	} else {'
-			echo '		logger.warn("maven repos skipped cause <$nexusUrl> is not reachable!")'
+			echo '	} catch (UnknownHostException uhe) {'
+			echo '		def host = nexusUrl.find($/(?<=https?://)[^/]+/$)'
+			echo '		logger.warn("maven repos skipped cause <$host> cannot be resolved!")'
 			echo '	}'
 		}; echo '}'
 	)
