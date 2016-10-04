@@ -70,8 +70,9 @@ profile_details() { # {{{
 	local profile="$1"
 	no_debug slog -hg "Profile '$profile' details"
 	# hide the password
-	git config --get-regexp "${profile}.*" | column -t | sed -r ':a;s/([.]password\s+[*]*)[^*]/\1*/g;ta'
-	#  | perl -pe 's/([.]password\s+)(\S+)/$1."*" x length($2)/e'
+	git config --get-regexp "${profile}.*" | column -t | sed -r 's/([.]password).*$/\1/'
+	# | sed -r ':a;s/([.]password\s+[*]*)[^*]/\1*/g;ta'
+	# | perl -pe 's/([.]password\s+)(\S+)/$1."*" x length($2)/e'
 } # }}}
 
 profiles_status() { # {{{
