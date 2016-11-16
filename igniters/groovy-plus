@@ -408,9 +408,11 @@ add_build_gradle() { # {{{
 		}; echo
 	)
 	|// [tasks] definition
-	|task listJars << {
-	|	// print out the jars used by the project
-	|	configurations.compile.each { File file -> println file.name }
+	|task listJars {
+	|	description = 'print out the jars used by the project'
+	|	doLast {
+	|		configurations.compile.each { File file -> println file.name }
+	|	}
 	|}
 	|
 	|// vim: ft=groovy:fdm=indent
