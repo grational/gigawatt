@@ -303,8 +303,9 @@ add_build_gradle() { # {{{
 		[[ $lnexus == on ]] && {
 			echo
 			echo '	// testing nexus server reachability'
+			echo '	Integer.metaClass.getSeconds = { delegate * 1000 }'
 			echo '	try {'
-			echo "		if ( new URL(nexusUrl).text.contains('Sonatype Nexus') ) {"
+			echo "		if ( new URL(nexusUrl).getText(connectTimeout: 5.seconds).contains('Sonatype Nexus') ) {"
 			echo '			logger.warn("Adding maven repositories, nexus <$nexusUrl>")'
 			echo '			maven {'
 			echo '				url "${nexusUrl}/content/repositories/snapshots"'
@@ -313,9 +314,9 @@ add_build_gradle() { # {{{
 			echo '		} else {'
 			echo '			logger.warn("maven repos skipped cause <$nexusUrl> is not reachable!")'
 			echo '		}'
-			echo '	} catch (UnknownHostException uhe) {'
+			echo '	} catch (IOException e) {'
 			echo '		def host = nexusUrl.find($/(?<=https?://)[^/]+/$)'
-			echo '		logger.warn("maven repos skipped cause <$host> cannot be resolved!")'
+			echo '		logger.warn("Problems adding maven repos <$host>!")'
 			echo '	}'
 		}; echo '}'
 	)
