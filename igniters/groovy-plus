@@ -247,7 +247,7 @@ add_build_gradle() { # {{{
 	|	id 'groovy'
 	|	// autogenerate eclipse project files
 	|	id 'eclipse'
-	|	// create and html index linking every report generated
+	|	// create an html index linking every report generated
 	|	id 'build-dashboard'
 	|	// view of the project (jars used, navigable source tree)
 	|	id 'project-report'
@@ -268,10 +268,6 @@ add_build_gradle() { # {{{
 	|
 	|// [general] configuration
 	|project.ext {
-	$(
-		echo "	sourceCompatibility = '$(java -version |& grep -m1 -oP '"\K\d[.]\d')'"
-		echo '	targetCompatibility = "$sourceCompatibility"'
-	)
 	$(
 		echo "	groovyVersion       = '$(groovy -version|grep -m1 -oP '(\d+[.])+\d+(?= )')'"
 		echo "	gradleVersion       = '$(gradle -version|grep -oPm1 '^Gradle \K\b(\d+[.])+\d+\b')'"
@@ -296,6 +292,13 @@ add_build_gradle() { # {{{
 			echo "	mainClassName = 'Launcher'"
 		}; echo '}'
 	)
+	|// [crosscompile] source and target java version
+	|allprojects {
+	$(
+		echo "	sourceCompatibility = '$(java -version |& grep -m1 -oP '"\K\d[.]\d')'"
+		echo '	targetCompatibility = "$sourceCompatibility"'
+	)
+	|}
 	|
 	|repositories {
 	|	jcenter()
