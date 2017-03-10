@@ -314,10 +314,8 @@ add_build_gradle() { # {{{
 			echo '	try {'
 			echo "		if ( new URL(nexusUrl).getText(connectTimeout: 5.seconds).contains('Sonatype Nexus') ) {"
 			echo '			logger.warn("Adding maven repositories, nexus <$nexusUrl>")'
-			echo '			maven {'
-			echo '				url "${nexusUrl}/content/repositories/snapshots"'
-			echo '				url "${nexusUrl}/content/repositories/releases"'
-			echo '			}'
+			echo '			maven { url "${nexusUrl}/content/repositories/snapshots" }'
+			echo '			maven { url "${nexusUrl}/content/repositories/releases"  }'
 			echo '		} else {'
 			echo '			logger.warn("maven repos skipped cause <$nexusUrl> is not reachable!")'
 			echo '		}'
