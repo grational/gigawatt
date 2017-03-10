@@ -274,8 +274,12 @@ add_build_gradle() { # {{{
 	)
 	|	spockVersion        = '1.0-groovy-2.4'
 	|	codenarcVersion     = '0.24.1'
-	|	slf4jVersion        = '1.7.21'
-	|	log4jVersion        = '2.6.2'
+	|	slf4jVersion        = '1.7.24'
+	$(
+		[[ $application == 'on' ]] && {
+			echo "	log4jVersion        = '2.8.1'"
+		}
+	)
 	|}
 	|
 	|project.with {
@@ -328,11 +332,15 @@ add_build_gradle() { # {{{
 	|	// Groovy language support
 	|	compile "org.codehaus.groovy:groovy-all:\$groovyVersion"
 	|
-	|	// Slf4j dependencies with log4j2 backend
+	|	// Slf4j dependencies
 	|	compile "org.slf4j:slf4j-api:\$slf4jVersion"
-	|	compile "org.apache.logging.log4j:log4j-slf4j-impl:\$log4jVersion"
-	|	compile "org.apache.logging.log4j:log4j-api:\$log4jVersion"
-	|	compile "org.apache.logging.log4j:log4j-core:\$log4jVersion"
+	$(
+		[[ $application == 'on' ]] && {
+			echo '	compile "org.apache.logging.log4j:log4j-slf4j-impl:\$log4jVersion"'
+			echo '	compile "org.apache.logging.log4j:log4j-api:\$log4jVersion"'
+			echo '	compile "org.apache.logging.log4j:log4j-core:\$log4jVersion"'
+		}
+	)
 	|
 	|	// We use the awesome Spock testing and specification framework
 	|	testCompile "org.spockframework:spock-core:\$spockVersion"
@@ -749,8 +757,10 @@ add_log4j2_conf() { # {{{
 		exit 1
 	fi
 } # }}}
-log4j_conf="${main_rsc}/log4j2.xml"
-add_log4j2_conf "${log4j_conf}"
+if [[ $application == 'on' ]]; then
+	log4j_conf="${main_rsc}/log4j2.xml"
+	add_log4j2_conf "${log4j_conf}"
+fi
 # }}}
 
 ## eclipse project files: .classpath, .project, .settings {{{
