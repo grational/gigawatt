@@ -14,7 +14,7 @@
 ## - customize classname                                     ##
 ## --------------------------------------------------------- ##
 
-default_package() {
+default_package() { # {{{
 	local def_package="$(git config "$profile".package)"; : "${def_package:=none}"
 
 	if [[ $def_package == none ]]; then
@@ -25,9 +25,9 @@ default_package() {
 	else
 		echo "$def_package"
 	fi
-}
+} # }}}
 
-save_as_default() {
+save_as_default() { # {{{
 	local key="$1"
 	local value="$2"
 	local oldef="$(git config "$profile"."$key")"
@@ -44,9 +44,9 @@ save_as_default() {
 			esac
 		done
 	fi
-}
+} # }}}
 
-asks_jdk_parameters() {
+asks_jdk_parameters() { # {{{
 	# application
 	slog -hg 'Do you want to create an application instead of a library? (no)'
 	select REPLY in yes no; do
@@ -98,7 +98,7 @@ asks_jdk_parameters() {
 			no) nexus=off; break;;
 		esac
 	done
-}
+} # }}}
 
 # general connection test {{{
 # -----------------------
@@ -226,9 +226,9 @@ add_build_gradle() { # {{{
 	local lpackage="${2}"
 	local lversion="${3}"
 	local ldescription="${4}"
-	local lapp="${6}"
-	local lfatjar="${7}"
-	local lnexus="$8"
+	local lapp="${5}"
+	local lfatjar="${6}"
+	local lnexus="${7}"
 
 	# test remote nexus server with groovy
 	# remember to try catch (because of java.net.UnknownHostException)
@@ -678,7 +678,6 @@ add_build_gradle \
 	"${package_name}" \
 	"${project_version}" \
 	"${description}" \
-	"${profile}" \
 	"${application}" \
 	"${fatjar}" \
 	"${nexus}"
