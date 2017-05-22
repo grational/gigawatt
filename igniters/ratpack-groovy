@@ -109,7 +109,7 @@ add_ratpack_groovy() { # {{{
 	|ratpack {
 	|	handlers {
 	|		get {
-	|			render 'A simpl
+	|			render "A simple 'gigawatt' powered ratpack application"
 	|		}
 	|	}
 	|
