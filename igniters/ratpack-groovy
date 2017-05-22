@@ -13,7 +13,7 @@ readonly -a igDEPS=()
 readonly -a igTAGS=(groovy gradle vim sublimetext linux osx)
 # specific
 readonly ratpack_dir='src/ratpack'
-readonly classes_dir='src/groovy'
+readonly classes_dir='src/main/groovy'
 readonly gradle_conf='build.gradle'
 # }}}
 
