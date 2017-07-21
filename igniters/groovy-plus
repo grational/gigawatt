@@ -254,7 +254,7 @@ add_build_gradle() { # {{{
 	|	// groovy code linter
 	|	id 'codenarc'
 	|	// test code coverage plugin
-	|	id 'net.saliman.cobertura' version '2.3.2'
+	|	id 'net.saliman.cobertura' version '2.5.0'
 	$(
 		[[ $lapp == on ]] && {
 			echo "	// add run task to execute application"
