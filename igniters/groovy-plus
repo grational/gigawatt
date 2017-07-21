@@ -273,7 +273,7 @@ add_build_gradle() { # {{{
 		echo "	gradleVersion       = '$(gradle -version|grep -oPm1 '^Gradle \K\b(\d+[.])+\d+\b')'"
 	)
 	|	spockVersion        = '1.1-groovy-2.4'
-	|	codenarcVersion     = '0.24.1'
+	|	codenarcVersion     = '0.27.0'
 	|	slf4jVersion        = '1.7.25'
 	$(
 		[[ $application == 'on' ]] && {
