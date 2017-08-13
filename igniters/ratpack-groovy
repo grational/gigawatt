@@ -76,7 +76,7 @@ add_build_gradle() { # {{{
 	|allprojects {
 	$(
 		echo "	sourceCompatibility = '$(java -version |& grep -m1 -oP '"\K\d[.]\d')'"
-		echo '	targetCompatibility = "$sourceCompatibility"'
+		echo '	targetCompatibility = sourceCompatibility'
 	)
 	|}
 	|
