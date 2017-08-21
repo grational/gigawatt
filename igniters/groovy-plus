@@ -429,6 +429,13 @@ add_build_gradle() { # {{{
 	|	}
 	|}
 	|
+	|tasks.withType(Test) {
+	|	maxParallelForks = Runtime.runtime.availableProcessors() / 2
+	|}
+	|task unitTest(type: Test) {
+	|	exclude '**/*ISpec*'
+	|	exclude '**/*FSpec*'
+	|}
 	|// vim: ft=groovy:fdm=indent
 	EOF
 } # }}}
