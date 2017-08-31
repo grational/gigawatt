@@ -401,12 +401,8 @@ add_build_gradle() { # {{{
 	)
 	|
 	|check {
-	|	// clean before check
-	|	dependsOn 'clean'
 	|	// create the code coverage report
 	|	dependsOn 'cobertura'
-	|	// set the correct order for the dep tasks
-	|	tasks.findByName('cobertura').mustRunAfter 'clean'
 	|}
 	$(
 		[[ $lapp == 'on' ]] && {
