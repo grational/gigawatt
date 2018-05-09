@@ -58,10 +58,10 @@ get_info() { # {{{
 				lkey="$k"
 				break ;;
 			?\#)
-				lkey="${k}is"
+				lkey="${k:0:1}is"
 				break ;;
 			?b)
-				lkey="${k}es"
+				lkey="${k:0:1}es"
 				break ;;
 			*)
 				echo "Unexpected value for key: ${k}"
