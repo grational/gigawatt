@@ -160,7 +160,6 @@ gen_global() { # {{{
 	|	\\tempo ${mov_value} = ${tempo}
 	|	\\set Score.skipBars = ##t
 	|	\\set Score.countPercentRepeats = ##t
-	|	\\set Staff.hairpinToBarline = ##f
 	|}
 	EOF
 	# }}}
