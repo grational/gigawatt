@@ -255,6 +255,8 @@ add_build_gradle() { # {{{
 	|	id 'codenarc'
 	|	// test code coverage plugin
 	|	id 'net.saliman.cobertura' version '2.5.0'
+	|	// awesome git tag / gradle version integration
+	|	id 'pl.allegro.tech.build.axion-release' version '1.9.1'
 	$(
 		[[ $lapp == on ]] && {
 			echo "	// add run task to execute application"
