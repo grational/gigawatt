@@ -50,8 +50,8 @@ add_build_gradle() { # {{{
 	|plugins {
 	|	// support for groovy in ratpack
 	|	id 'io.ratpack.ratpack-groovy' version '1.4.6'
-	|	// create fatjar to distribute easily the artifact
-	|	id 'com.github.johnrengelman.shadow' version '2.0.0'
+	|	// awesome git tag / gradle version integration
+	|	id 'pl.allegro.tech.build.axion-release' version '1.9.1'
 	|}
 	|
 	|// [general] configuration
