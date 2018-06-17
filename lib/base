@@ -1,7 +1,7 @@
 ## ---------------------------------------- ##
 ## @lib: bare functions                     ##
 ## @author: Giuseppe Ricupero               ##
-## @date: 16-08-2016 07.06                  ##
+## @date: 30-01-2018 21.06                  ##
 ## @description:                            ##
 ## it contains some functions used at the   ##
 ## very beginning to test main requirements ##
@@ -57,9 +57,9 @@ reachable() { # {{{
 	wait "$pid"
 } # }}}
 
-destructor() {
+destructor() { # {{{
 	local temp_project_dir="/tmp/${gwNAME}/${project}"
 	[[ -d $temp_project_dir ]] && rm -rf "${temp_project_dir}"
-}
+} # }}}
 
 # vim: ft=zsh:fdm=marker
