@@ -82,6 +82,9 @@ add_build_gradle() { # {{{
 	|
 	|repositories {
 	|	jcenter()
+	|
+	|	// leverage github as a maven repository
+	|	maven { url 'https://jitpack.io' }
 	|}
 	|
 	|dependencies {
