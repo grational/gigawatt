@@ -287,7 +287,7 @@ add_build_gradle() { # {{{
 	|project.with {
 	|	//project.name is set in the settings.gradle with rootProject.name
 	|	group                 "${lpackage}"
-	|	version               "${lversion}-SNAPSHOT" // (remove -SNAPSHOT for releases)
+	|	version               scmVersion.version // (remove -SNAPSHOT for releases)
 	|	description           "${ldescription}"
 	|	wrapper.gradleVersion "\$gradleVersion"
 	$(
