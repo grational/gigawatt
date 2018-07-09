@@ -433,10 +433,24 @@ add_build_gradle() { # {{{
 	|tasks.withType(Test) {
 	|	maxParallelForks = Runtime.runtime.availableProcessors() / 2
 	|}
-	|task unitTest(type: Test) {
+	|task uniTest(type: Test) {
+	|	description = 'unit tests task'
 	|	exclude '**/*ISpec*'
 	|	exclude '**/*FSpec*'
 	|}
+	|task intTest(type: Test) {
+	|	description = 'integration tests task'
+	|	exclude '**/*USpec*'
+	|	exclude '**/*FSpec*'
+	|}
+	|task funTest(type: Test) {
+	|	description = 'functional tests task'
+	|	exclude '**/*USpec*'
+	|	exclude '**/*ISpec*'
+	|}
+	|gradle.startParameter.excludedTaskNames += "uniTest"
+	|gradle.startParameter.excludedTaskNames += "intTest"
+	|gradle.startParameter.excludedTaskNames += "funTest"
 	|// vim: ft=groovy:fdm=indent
 	EOF
 } # }}}
