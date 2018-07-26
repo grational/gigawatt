@@ -333,20 +333,20 @@ add_build_gradle() { # {{{
 	|
 	|dependencies {
 	|	// Groovy language support
-	|	compile "org.codehaus.groovy:groovy-all:\$groovyVersion"
+	|	implementation "org.codehaus.groovy:groovy-all:\$groovyVersion"
 	|
 	|	// Slf4j dependencies
-	|	compile "org.slf4j:slf4j-api:\$slf4jVersion"
+	|	implementation "org.slf4j:slf4j-api:\$slf4jVersion"
 	$(
 		[[ $application == 'on' ]] && {
-			echo '	compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4jVersion"'
-			echo '	compile "org.apache.logging.log4j:log4j-api:$log4jVersion"'
-			echo '	compile "org.apache.logging.log4j:log4j-core:$log4jVersion"'
+			echo '	implementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4jVersion"'
+			echo '	implementation "org.apache.logging.log4j:log4j-api:$log4jVersion"'
+			echo '	implementation "org.apache.logging.log4j:log4j-core:$log4jVersion"'
 		}
 	)
 	|
 	|	// We use the awesome Spock testing and specification framework
-	|	testCompile "org.spockframework:spock-core:\$spockVersion"
+	|	testImplementation "org.spockframework:spock-core:\$spockVersion"
 	|}
 	|
 	|// codenarc groovy source analyses
