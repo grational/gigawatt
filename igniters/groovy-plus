@@ -282,6 +282,7 @@ add_build_gradle() { # {{{
 			echo "	log4jVersion        = '2.11.0'"
 		}
 	)
+	|	wrapper.gradleVersion "\$gradleVersion"
 	|}
 	|
 	|project.with {
@@ -289,7 +290,6 @@ add_build_gradle() { # {{{
 	|	group                 "${lpackage}"
 	|	version               scmVersion.version // (remove -SNAPSHOT for releases)
 	|	description           "${ldescription}"
-	|	wrapper.gradleVersion "\$gradleVersion"
 	$(
 		[[ $lapp == on ]] && {
 			echo "	// executed if no other tasks are specified"

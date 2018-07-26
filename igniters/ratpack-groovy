@@ -62,13 +62,13 @@ add_build_gradle() { # {{{
 	)
 	|	spockVersion  = '1.1-groovy-2.4'
 	|	slf4jVersion  = '1.7.25'
+	|	wrapper.gradleVersion "\$gradleVersion"
 	|}
 	|
 	|project.with {
 	|	//project.name is set in the settings.gradle with rootProject.name
 	|	version               "${lversion}-SNAPSHOT" // (remove -SNAPSHOT for releases)
 	|	description           "${ldescription}"
-	|	wrapper.gradleVersion "\$gradleVersion"
 	|	defaultTasks          'run'
 	|}
 	|
