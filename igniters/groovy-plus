@@ -243,6 +243,12 @@ add_build_gradle() { # {{{
 	|
 	|// [plugins] this block must be the first
 	|plugins {
+	$(
+		[[ $lapp != on ]] && {
+			echo "	// to use the 'api' keyword in dependencies"
+			echo "	id 'java-library'"
+		}
+	)
 	|	// support for groovy
 	|	id 'groovy'
 	|	// autogenerate eclipse project files
