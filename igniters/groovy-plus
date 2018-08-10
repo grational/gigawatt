@@ -415,6 +415,11 @@ add_build_gradle() { # {{{
 	|	// create the code coverage report
 	|	dependsOn 'cobertura'
 	|}
+	|
+	|release {
+	|	// test everything before a release
+	|	dependsOn 'test'
+	|}
 	$(
 		[[ $lapp == 'on' ]] && {
 			echo

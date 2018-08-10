@@ -95,6 +95,11 @@ add_build_gradle() { # {{{
 	|	testImplementation "org.spockframework:spock-core:\$spockVersion"
 	|}
 	|
+	|// [tasks] configuration //
+	|release {
+	|	// test everything before a release
+	|	dependsOn 'test'
+	|}
 	|// vim: ft=groovy:fdm=indent
 	EOF
 } # }}}
