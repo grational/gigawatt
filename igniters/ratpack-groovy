@@ -49,9 +49,9 @@ add_build_gradle() { # {{{
 	|// [plugins] this block must be the first
 	|plugins {
 	|	// support for groovy in ratpack
-	|	id 'io.ratpack.ratpack-groovy' version '1.4.6'
+	|	id 'io.ratpack.ratpack-groovy' version '1.5.4'
 	|	// awesome git tag / gradle version integration
-	|	id 'pl.allegro.tech.build.axion-release' version '1.9.1'
+	|	id 'pl.allegro.tech.build.axion-release' version '1.9.2'
 	|}
 	|
 	|// [general] configuration
