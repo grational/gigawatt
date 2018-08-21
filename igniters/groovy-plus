@@ -229,6 +229,7 @@ add_build_gradle() { # {{{
 	local lapp="${5}"
 	local lfatjar="${6}"
 	local lnexus="${7}"
+	local lversioned="${8}"
 
 	# test remote nexus server with groovy
 	# remember to try catch (because of java.net.UnknownHostException)
@@ -261,8 +262,12 @@ add_build_gradle() { # {{{
 	|	id 'codenarc'
 	|	// test code coverage plugin
 	|	id 'net.saliman.cobertura' version '2.5.4'
-	|	// awesome git tag / gradle version integration
-	|	id 'pl.allegro.tech.build.axion-release' version '1.9.2'
+	$(
+		[[ $lversioned == on ]] && {
+			echo "	// awesome git tag / gradle version integration"
+			echo "	id 'pl.allegro.tech.build.axion-release' version '1.9.2'"
+		}
+	)
 	$(
 		[[ $lapp == on ]] && {
 			echo "	// add run task to execute application"
@@ -294,7 +299,13 @@ add_build_gradle() { # {{{
 	|project.with {
 	|	//project.name is set in the settings.gradle with rootProject.name
 	|	group                 "${lpackage}"
-	|	version               scmVersion.version // (remove -SNAPSHOT for releases)
+	$(
+		[[ $lversioned == on ]] && {
+			echo "	version               scmVersion.version"
+		} || {
+			echo "	version               '${lversion}' // remove -SNAPSHOT for releases"
+		}
+	)
 	|	description           "${ldescription}"
 	$(
 		[[ $lapp == on ]] && {
@@ -360,7 +371,7 @@ add_build_gradle() { # {{{
 	|	toolVersion = "\$codenarcVersion"
 	|
 	|	codenarcMain {
-	|		configFile = rootProject.file('config/codenarc/ruleset.groovy')
+	|		configFile = rootProject.file('conf/codenarc/ruleset.groovy')
 	|		exclude "**/package-info.*"
 	|		ignoreFailures true       // does not block builds
 	|		maxPriority1Violations 0
@@ -368,7 +379,7 @@ add_build_gradle() { # {{{
 	|		maxPriority3Violations 20
 	|	}
 	|	codenarcTest {
-	|		configFile = rootProject.file('config/codenarc/ruleset-test.groovy')
+	|		configFile = rootProject.file('conf/codenarc/ruleset-test.groovy')
 	|		ignoreFailures true
 	|		maxPriority1Violations 0
 	|		maxPriority2Violations 10
@@ -416,10 +427,14 @@ add_build_gradle() { # {{{
 	|	dependsOn 'cobertura'
 	|}
 	|
-	|release {
-	|	// test everything before a release
-	|	dependsOn 'test'
-	|}
+	$(
+		[[ $lversioned == 'on' ]] && {
+			echo "release {"
+			echo "	// test everything before a release"
+			echo "	dependsOn 'test'"
+			echo "}"
+		}
+	)
 	$(
 		[[ $lapp == 'on' ]] && {
 			echo
@@ -470,7 +485,7 @@ add_build_gradle() { # {{{
 
 ## add codenarc configuration files {{{
 add_codenarc_rulesets() {
-	local -r conf_path='config/codenarc'
+	local -r conf_path='conf/codenarc'
 	local -r mainrule="${conf_path}/ruleset.groovy"
 	local -r testrule="${conf_path}/ruleset-test.groovy"
 
@@ -713,7 +728,8 @@ add_build_gradle \
 	"${description}" \
 	"${application}" \
 	"${fatjar}" \
-	"${nexus}"
+	"${nexus}" \
+	"${versioned}" # from the gigawatt main script
 
 # unit test 7.1
 if ! silent_gradle tasks; then
@@ -747,7 +763,7 @@ add_codenarc_rulesets
 # unit test 14.a
 conf_files=(ruleset ruleset-test)
 for f in "${conf_files[@]}"; do
-	if [[ ! -f "config/codenarc/${f}.groovy" ]]; then
+	if [[ ! -f "conf/codenarc/${f}.groovy" ]]; then
 		slog "${f}.groovy not created correctly: exiting..."
 		exit 1
 	fi
