@@ -67,7 +67,7 @@ add_build_gradle() { # {{{
 	|
 	|project.with {
 	|	//project.name is set in the settings.gradle with rootProject.name
-	|	version               "${lversion}-SNAPSHOT" // (remove -SNAPSHOT for releases)
+	|	version               scmVersion.version
 	|	description           "${ldescription}"
 	|	defaultTasks          'run'
 	|}
