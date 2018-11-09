@@ -194,56 +194,56 @@ gen_makefile() { # {{{
 	|midi_score:
 	|	@\${COMPILER} midi/score.ly
 	|	mv score.midi "midi/\${SONG}.midi"
-	|	aoss timidity -A100a -in "midi/\${SONG}.midi"
+	|	timidity -A100a -in "midi/\${SONG}.midi"
 	|tp:
 	|	@\${COMPILER} tp.ly
 	|	rm -f tp.ps
 	|midi_tp:
 	|	@\${COMPILER} midi/tp.ly
 	|	mv tp.midi "midi/\${SONG}_tp.midi"
-	|	aoss timidity -A100a -in "midi/\${SONG}_tp.midi"
+	|	timidity -A100a -in "midi/\${SONG}_tp.midi"
 	|as:
 	|	@\${COMPILER} as.ly
 	|	rm -f as.ps
 	|midi_as:
 	|	@\${COMPILER} midi/as.ly
 	|	mv as.midi "midi/\${SONG}_as.midi"
-	|	aoss timidity -A100a -in "midi/\${SONG}_as.midi"
+	|	timidity -A100a -in "midi/\${SONG}_as.midi"
 	|ts:
 	|	@\${COMPILER} ts.ly
 	|	rm -f ts.ps
 	|midi_ts:
 	|	@\${COMPILER} midi/ts.ly
 	|	mv ts.midi "midi/\${SONG}_ts.midi"
-	|	aoss timidity -A100a -in "midi/\${SONG}_ts.midi"
+	|	timidity -A100a -in "midi/\${SONG}_ts.midi"
 	|tb:
 	|	@\${COMPILER} tb.ly
 	|	rm -f tb.ps
 	|midi_tb:
 	|	@\${COMPILER} midi/tb.ly
 	|	mv tb.midi "midi/\${SONG}_tb.midi"
-	|	aoss timidity -A100a -in "midi/\${SONG}_tb.midi"
+	|	timidity -A100a -in "midi/\${SONG}_tb.midi"
 	|bs:
 	|	@\${COMPILER} bs.ly
 	|	rm -f bs.ps
 	|midi_bs:
 	|	@\${COMPILER} midi/bs.ly
 	|	mv bs.midi "midi/\${SONG}_bs.midi"
-	|	aoss timidity -A100a -in "midi/\${SONG}_bs.midi"
+	|	timidity -A100a -in "midi/\${SONG}_bs.midi"
 	|rhythm:
 	|	@\${COMPILER} rhythm.ly
 	|	rm -f rhythm.ps
 	|midi_rhythm:
 	|	@\${COMPILER} midi/rhythm.ly
 	|	mv rhythm.midi "midi/\${SONG}_rhythm.midi"
-	|	aoss timidity -A100a -in "midi/\${SONG}_rhythm.midi"
+	|	timidity -A100a -in "midi/\${SONG}_rhythm.midi"
 	|ebass:
 	|	@\${COMPILER} ebass.ly
 	|	rm -f ebass.ps
 	|midi_ebass:
 	|	@\${COMPILER} midi/ebass.ly
 	|	mv ebass.midi "midi/\${SONG}_ebass.midi"
-	|	aoss timidity -A100a -in "midi/\${SONG}_ebass.midi"
+	|	timidity -A100a -in "midi/\${SONG}_ebass.midi"
 	|mp3: wav
 	|	@lame -h "wav/\${SONG}.wav" "mp3/\${SONG}.mp3"
 	|	lame -h "wav/\${SONG}_tp.wav" "mp3/\${SONG}_tp.mp3"
