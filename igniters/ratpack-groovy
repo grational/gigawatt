@@ -49,9 +49,9 @@ add_build_gradle() { # {{{
 	|// [plugins] this block must be the first
 	|plugins {
 	|	// support for groovy in ratpack
-	|	id 'io.ratpack.ratpack-groovy' version '1.5.4'
+	|	id 'io.ratpack.ratpack-groovy' version '1.6.0'
 	|	// awesome git tag / gradle version integration
-	|	id 'pl.allegro.tech.build.axion-release' version '1.9.2'
+	|	id 'pl.allegro.tech.build.axion-release' version '1.10.0'
 	|}
 	|
 	|// [general] configuration
@@ -60,8 +60,8 @@ add_build_gradle() { # {{{
 		echo "	groovyVersion = '$(groovy -version|grep -m1 -oP '(\d+[.])+\d+(?= )')'"
 		echo "	gradleVersion = '$(gradle -version|grep -oPm1 '^Gradle \K\b(\d+[.])+\d+\b')'"
 	)
-	|	spockVersion  = '1.1-groovy-2.4'
-	|	slf4jVersion  = '1.7.25'
+	|	spockVersion  = '1.2-groovy-2.4'
+	|	slf4jVersion  = '1.7.26'
 	|	wrapper.gradleVersion "\$gradleVersion"
 	|}
 	|
