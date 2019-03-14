@@ -252,6 +252,8 @@ add_build_gradle() { # {{{
 	)
 	|	// support for groovy
 	|	id 'groovy'
+	|	// required to use api keyword in deps
+	|	id 'java-library'
 	|	// autogenerate eclipse project files
 	|	id 'eclipse'
 	|	// create an html index linking every report generated
@@ -350,7 +352,7 @@ add_build_gradle() { # {{{
 	|
 	|dependencies {
 	|	// Groovy language support
-	|	implementation "org.codehaus.groovy:groovy-all:\$groovyVersion"
+	|	api "org.codehaus.groovy:groovy:\$groovyVersion"
 	|
 	|	// Slf4j dependencies
 	|	implementation "org.slf4j:slf4j-api:\$slf4jVersion"
