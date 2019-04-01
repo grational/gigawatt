@@ -140,8 +140,8 @@ readonly test_dir="src/test/${language}"
 readonly main_rsc='src/main/resources'
 readonly init_class="Library.${language}"
 readonly init_test="LibraryTest.${language}"
-readonly default_class="${main_dir}/${init_class}"
-readonly default_test="${test_dir}/${init_test}"
+readonly default_class="${main_dir}/${package_path}/${init_class}"
+readonly default_test="${test_dir}/${package_path}/${init_test}"
 readonly gradle_conf='build.gradle'
 # }}}
 
@@ -592,7 +592,7 @@ EOF
 # }}}
 
 ## build skeleton of the project {{{
-silent_gradle init --type groovy-library
+silent_gradle init --type groovy-library --dsl groovy --package "${package_name}" --test-framework spock
 # }}}
 
 ## 2. Remove ${gradle_conf}, ${default_class}, ${default_test} {{{
