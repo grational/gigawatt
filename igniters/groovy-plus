@@ -261,11 +261,11 @@ add_build_gradle() { # {{{
 	|	// groovy code linter
 	|	id 'codenarc'
 	|	// test code coverage plugin
-	|	id 'net.saliman.cobertura' version '2.5.4'
+	|	id 'net.saliman.cobertura' version '2.6.0'
 	$(
 		[[ $lversioned == on ]] && {
 			echo "	// awesome git tag / gradle version integration"
-			echo "	id 'pl.allegro.tech.build.axion-release' version '1.9.2'"
+			echo "	id 'pl.allegro.tech.build.axion-release' version '1.10.0'"
 		}
 	)
 	$(
@@ -285,12 +285,12 @@ add_build_gradle() { # {{{
 		echo "	groovyVersion       = '$(groovy -version|grep -m1 -oP '(\d+[.])+\d+(?= )')'"
 		echo "	gradleVersion       = '$(gradle -version|grep -oPm1 '^Gradle \K\b(\d+[.])+\d+\b')'"
 	)
-	|	spockVersion        = '1.1-groovy-2.4'
-	|	codenarcVersion     = '1.2'
-	|	slf4jVersion        = '1.7.25'
+	|	spockVersion        = '1.3-groovy-2.5'
+	|	codenarcVersion     = '1.3'
+	|	slf4jVersion        = '1.7.26'
 	$(
 		[[ $application == 'on' ]] && {
-			echo "	log4jVersion        = '2.11.0'"
+			echo "	log4jVersion        = '2.11.2'"
 		}
 	)
 	|	wrapper.gradleVersion "\$gradleVersion"
