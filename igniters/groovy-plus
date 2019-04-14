@@ -334,7 +334,10 @@ add_build_gradle() { # {{{
 			echo '	// testing nexus server reachability'
 			echo '	Integer.metaClass.getSeconds = { delegate * 1000 }'
 			echo '	try {'
-			echo "		if ( new URL(nexusUrl).getText(connectTimeout: 5.seconds).contains('Sonatype Nexus') ) {"
+			echo '		if ( new URL(nexusUrl).getText ('
+			echo '		       connectTimeout: 5.seconds,'
+			echo '		       readTimeout: 5.seconds'
+			echo "		     ).contains('Sonatype Nexus') ) {"
 			echo '			logger.warn("Adding maven repositories, nexus <$nexusUrl>")'
 			echo '			maven { url "${nexusUrl}/content/repositories/snapshots" }'
 			echo '			maven { url "${nexusUrl}/content/repositories/releases"  }'
