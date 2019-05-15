@@ -89,7 +89,7 @@ add_build_gradle() { # {{{
 	|
 	|dependencies {
 	|	// Slf4j dependencies to print out to the console
-	|	implementation "org.slf4j:slf4j-nop:\$slf4jVersion"
+	|	implementation "org.slf4j:slf4j-simple:\$slf4jVersion"
 	|
 	|	// We use the awesome Spock testing and specification framework
 	|	testImplementation "org.spockframework:spock-core:\$spockVersion"
