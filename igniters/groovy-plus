@@ -301,7 +301,6 @@ add_build_gradle() { # {{{
 			echo "	log4jVersion        = '2.14.0'"
 		}
 	)
-	|	wrapper.gradleVersion "\$gradleVersion"
 	|}
 	|
 	|project.with {
