@@ -268,15 +268,15 @@ add_build_gradle() { # {{{
 	|	id 'project-report'
 	|	// groovy code linter
 	|	id 'codenarc'
-	|	// test code coverage plugin
-	|	id 'net.saliman.cobertura' version '2.6.0'
 	$(
-		[[ $lversioned == on ]] && {
-			echo "	// awesome git tag / gradle version integration"
-			echo "	id 'pl.allegro.tech.build.axion-release' version '1.10.0'"
+		plugin='net.saliman.cobertura' && {
+			echo "	id '${plugin}' version '$(gradle_plugin_latest_version "${plugin}")'"
 		}
-	)
-	$(
+		[[ $lversioned == on ]] && {
+			plugin='pl.allegro.tech.build.axion-release'
+			echo "	// awesome git tag / gradle version integration"
+			echo "	id '${plugin}' version '$(gradle_plugin_latest_version "${plugin}")'"
+		}
 		[[ $lapp == on ]] && {
 			echo "	// add run task to execute application"
 			echo "	id 'application'"
@@ -294,11 +294,11 @@ add_build_gradle() { # {{{
 		echo "	gradleVersion       = '$(gradle -version|grep -oPm1 '^Gradle \K\b(\d+[.])+\d+\b')'"
 	)
 	|	spockVersion        = '1.3-groovy-2.5'
-	|	codenarcVersion     = '1.3'
-	|	slf4jVersion        = '1.7.26'
+	|	codenarcVersion     = '2.0.0'
+	|	slf4jVersion        = '1.7.30'
 	$(
 		[[ $application == 'on' ]] && {
-			echo "	log4jVersion        = '2.11.2'"
+			echo "	log4jVersion        = '2.14.0'"
 		}
 	)
 	|	wrapper.gradleVersion "\$gradleVersion"
