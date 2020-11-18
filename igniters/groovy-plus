@@ -583,18 +583,28 @@ EOF
 
 # }}}
 
+# customize some parameters according to the application or library dicotomy {{{
+if [[ $application == 'on' ]]; then
+	groovy_init_type='groovy-application'
+	gradle_prefix='app'
+else
+	groovy_init_type='groovy-library'
+	gradle_prefix='lib'
+fi
+# }}}
+
 ## build skeleton of the project {{{
-silent_gradle init --type groovy-library --dsl groovy --package "${package_name}" --test-framework spock
+silent_gradle init --type "${groovy_init_type}" --dsl groovy --package "${package_name}" --test-framework spock --project-name "${project}"
 # }}}
 
 ## 2. Remove ${gradle_conf}, ${default_class}, ${default_test} {{{
 files_to_remove=("${gradle_conf}" "${default_class}" "${default_test}")
-rm "${files_to_remove[@]}"
+for f in "${files_to_remove}"; do rm "${gradle_prefix}/${f}"; done
 # }}}
 
 ## 3. create resource plus and default package in main and test {{{
 dirs_to_create=("${main_dir}/${package_path}" "${test_dir}/${package_path}" "${main_rsc}")
-mkdir -p "${dirs_to_create[@]}"
+for d in "${dirs_to_create[@]}"; do mkdir -p "${gradle_prefix}/${d}"; done
 # }}}
 
 ## 4. Add gradle properties with Nexus repository data (optional) {{{
@@ -716,7 +726,7 @@ default_version=0.1.0
 project_version=${default_version}
 
 add_build_gradle \
-	"${gradle_conf}" \
+	"${gradle_prefix}/${gradle_conf}" \
 	"${package_name}" \
 	"${project_version}" \
 	"${description}" \
@@ -733,8 +743,8 @@ fi
 # }}}
 
 # 7.2 create library / library_specification
-mainpath="${main_dir}/${package_path}"
-testpath="${test_dir}/${package_path}"
+mainpath="${gradle_prefix}/${main_dir}/${package_path}"
+testpath="${gradle_prefix}/${test_dir}/${package_path}"
 
 add_library "${mainpath}" "${main_class}" "${package_name}"
 add_library_specification "${testpath}" "${main_class}" "${package_name}"
@@ -746,7 +756,7 @@ fi
 
 # 7.3 optionally generate Launcher class
 if [[ $application == 'on' ]]; then
-	add_launcher_class "${main_dir}" "${main_class}" "${package_name}"
+	add_launcher_class "${gradle_prefix}/${main_dir}" "${main_class}" "${package_name}"
 fi
 # No need to test because of set -e
 # }}}
@@ -798,7 +808,7 @@ add_log4j2_conf() { # {{{
 	fi
 } # }}}
 if [[ $application == 'on' ]]; then
-	log4j_conf="${main_rsc}/log4j2.xml"
+	log4j_conf="${gradle_prefix}/${main_rsc}/log4j2.xml"
 	add_log4j2_conf "${log4j_conf}"
 fi
 # }}}
@@ -807,12 +817,12 @@ fi
 silent_gradle eclipse
 # unit test 10
 for ep_file in classpath project settings; do
-	if [[ ! -e .${ep_file} ]]; then
+	if [[ ! -e ${gradle_prefix}/.${ep_file} ]]; then
 		slog "Generating eclipse project files failed: exiting..."
 		exit 1
 	fi
 done
-eclipse_classpath=".classpath"
+eclipse_classpath="${gradle_prefix}/.classpath"
 sed -i -r 's/(org.eclipse.jdt.launching.JRE_CONTAINER)[^"]+/\1/' "${eclipse_classpath}"
 # unit test 11
 if grep -q 'StandardVMType' "${eclipse_classpath}"; then
