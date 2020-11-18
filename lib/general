@@ -140,6 +140,15 @@ silent_gradle() { # {{{
 	wait "$pid"
 } # }}}
 
+gradle_plugin_latest_version() { # {{{
+	local l_plugin="${1}"
+	local -r l_gradle_plugin_url='https://plugins.gradle.org'
+	local -r l_plugin_latest_version_xpath="(//span[@class='latest-version'])[1]/text()"
+
+	curl --silent --location "${l_gradle_plugin_url}/search?term=${l_plugin}" \
+		| xmllint --html --xpath "${l_plugin_latest_version_xpath}" - 2>/dev/null
+} # }}}
+
 git_auth_header() { # {{{
 	local backend="$1"
 	local token="$2"

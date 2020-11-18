@@ -46,7 +46,7 @@ source "${gwDIR}/lib/base"
 
 # dependencies test {{{
 # -----------------
-declare -a gwDEPS=(getopt curl sed grep ssh ssh-keygen git ping timeout)
+declare -a gwDEPS=(getopt curl sed grep ssh ssh-keygen git ping timeout xmllint)
 check_deps gwDEPS "$gwNAME"
 # }}}
 
