@@ -34,6 +34,7 @@ add_build_gradle() { # {{{
 	local lbuildfile="${1}"
 	local lversion="${2}"
 	local ldescription="${3}"
+	local lversioned="${4}"
 
 	# test remote nexus server with groovy
 	# remember to try catch (because of java.net.UnknownHostException)
@@ -48,10 +49,17 @@ add_build_gradle() { # {{{
 	|
 	|// [plugins] this block must be the first
 	|plugins {
-	|	// support for groovy in ratpack
-	|	id 'io.ratpack.ratpack-groovy' version '1.6.0'
-	|	// awesome git tag / gradle version integration
-	|	id 'pl.allegro.tech.build.axion-release' version '1.10.1'
+	$(
+		plugin='io.ratpack.ratpack-groovy' && {
+			echo '	// support for groovy in ratpack'
+			echo "	id '${plugin}' version '$(gradle_plugin_latest_version "${plugin}")'"
+		}
+		[[ $lversioned == on ]] && {
+			plugin='pl.allegro.tech.build.axion-release'
+			echo "	// awesome git tag / gradle version integration"
+			echo "	id '${plugin}' version '$(gradle_plugin_latest_version "${plugin}")'"
+		}
+	)
 	|}
 	|
 	|// [general] configuration
@@ -61,13 +69,18 @@ add_build_gradle() { # {{{
 		echo "	gradleVersion = '$(gradle -version|grep -oPm1 '^Gradle \K\b(\d+[.])+\d+\b')'"
 	)
 	|	spockVersion  = '1.3-groovy-2.4'
-	|	slf4jVersion  = '1.7.26'
-	|	wrapper.gradleVersion "\$gradleVersion"
+	|	slf4jVersion  = '1.7.30'
 	|}
 	|
 	|project.with {
 	|	//project.name is set in the settings.gradle with rootProject.name
-	|	version               scmVersion.version
+	$(
+		[[ $lversioned == on ]] && {
+			echo "	version               scmVersion.version"
+		} || {
+			echo "	version               '${lversion}' // remove -SNAPSHOT for releases"
+		}
+	)
 	|	description           "${ldescription}"
 	|	defaultTasks          'run'
 	|}
@@ -95,11 +108,15 @@ add_build_gradle() { # {{{
 	|	testImplementation "org.spockframework:spock-core:\$spockVersion"
 	|}
 	|
-	|// [tasks] configuration //
-	|release {
-	|	// test everything before a release
-	|	dependsOn 'test'
-	|}
+	$(
+		[[ $lversioned == 'on' ]] && {
+			echo '// [tasks] configuration //'
+			echo 'release {'
+			echo '	// test everything before a release'
+			echo "	dependsOn 'test'"
+			echo '}'
+		}
+	)
 	|// vim: ft=groovy:fdm=indent
 	EOF
 } # }}}
@@ -256,7 +273,8 @@ project_version=${default_version}
 add_build_gradle \
 	"${gradle_conf}" \
 	"${project_version}" \
-	"${description}"
+	"${description}" \
+	"${versioned}" # from the gigawatt main script
 
 # unit test 2.
 if ! silent_gradle tasks; then
