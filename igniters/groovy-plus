@@ -130,7 +130,7 @@ done
 ## variable initialization {{{
 # general
 readonly igNAME="${BASH_SOURCE##*/}"
-readonly -a igDEPS=(gradle sed grep)
+readonly -a igDEPS=(gradle sed grep httping)
 readonly -a igTAGS=(java gradle vim eclipse linux)
 # specific
 readonly language='groovy'
@@ -219,6 +219,16 @@ get_nexus_gradle_properties() { # {{{
 
 	add_gradle_properties "$nexusUrl/nexus" "$nexusUsername" "$nexusPassword"
 } ## }}}
+
+http_reachable() { # {{{
+	local -r host="$1"
+	local -r timeout="${2:-40}"
+	local -r count="${3:-4}"
+	timeout -s SIGTERM "$timeout" httping -c"$count" "$host" >/dev/null 2>&1 &
+	local -r pid=$!
+	no_debug spinner "$pid"
+	wait "$pid"
+} # }}}
 
 add_build_gradle() { # {{{
 
