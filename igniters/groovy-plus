@@ -102,8 +102,8 @@ asks_jdk_parameters() { # {{{
 
 # general connection test {{{
 # -----------------------
-# yahoo servers reply to ICMP
-if ! reachable 'www.yahoo.com'; then
+# google dns servers reply to ICMP
+if ! reachable '8.8.8.8'; then
 	echo >&2 "'${igNAME}' require an internet connection to work correctly. Aborting."
 	exit 1
 fi

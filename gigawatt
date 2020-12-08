@@ -199,7 +199,6 @@ readonly gcCONTACT="$(git config user.email)"
 # }}}
 
 ## 1. Test reachability of the git server backend {{{
-# yahoo servers reply to ICMP
 if [[ $versioned == on ]]; then
 	(
 		git_ssh_user="$(git config "${profile}".ssh-user)"
