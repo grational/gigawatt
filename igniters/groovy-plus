@@ -632,7 +632,7 @@ silent_gradle init --type "${groovy_init_type}" --dsl groovy --package "${packag
 
 ## 2. Remove ${gradle_conf}, ${default_class}, ${default_test} {{{
 files_to_remove=("${gradle_conf}" "${default_class}" "${default_test}")
-for f in "${files_to_remove}"; do rm "${gradle_prefix}/${f}"; done
+for f in "${files_to_remove[@]}"; do rm "${gradle_prefix}/${f}"; done
 # }}}
 
 ## 3. create resource plus and default package in main and test {{{
