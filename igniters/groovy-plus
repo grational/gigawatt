@@ -237,6 +237,33 @@ http_reachable() { # {{{
 	wait "$pid"
 } # }}}
 
+groovy2spock() { # {{{
+	local l_groovy_version="${*}"
+	local spock_version
+	case $l_groovy_version in
+		3.0*)
+			spock_version='2.0-M4-groovy-3.0';;
+		2.5*)
+			spock_version='1.3-groovy-2.5';;
+		2.4*)
+			spock_version='1.3-groovy-2.4';;
+		2.3*)
+			spock_version='1.1-groovy-2.3';;
+		2.0*)
+			spock_version='1.1-groovy-2.0';;
+		1.8*)
+			spock_version='0.7-groovy-1.8';;
+		1.7*)
+			spock_version='0.6-groovy-1.7';;
+		1.6*)
+			spock_version='0.5-groovy-1.6';;
+		*)
+			slog "Cannot find an appropriate version of spock for groovy '${groovy_version}': exiting..."
+			exit 1
+	esac
+	echo "${spock_version}"
+} # }}}
+
 add_build_gradle() { # {{{
 
 	local lbuildfile="${1}"
@@ -295,12 +322,13 @@ add_build_gradle() { # {{{
 	|// [general] configuration
 	|project.ext {
 	$(
-		echo "	groovyVersion       = '$(groovy -version|grep -m1 -oP '(\d+[.])+\d+(?= )')'"
-		echo "	gradleVersion       = '$(gradle -version|grep -oPm1 '^Gradle \K\b(\d+[.])+\d+\b')'"
+		groovy_version="$(groovy -version|grep -m1 -oP '(\d+[.])+\d+(?= )')"
+		echo "	groovyVersion   = '${groovy_version}'"
+		echo "	gradleVersion   = '$(gradle -version|grep -oPm1 '^Gradle \K\b(\d+[.])+\d+\b')'"
+		echo "	spockVersion    = '$(groovy2spock "${groovy_version}")'"
 	)
-	|	spockVersion        = '1.3-groovy-2.5'
-	|	codenarcVersion     = '2.0.0'
-	|	slf4jVersion        = '1.7.30'
+	|	codenarcVersion = '2.0.0'
+	|	slf4jVersion    = '1.7.30'
 	$(
 		[[ $application == 'on' ]] && {
 			echo "	log4jVersion        = '2.14.0'"
