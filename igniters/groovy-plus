@@ -14,6 +14,14 @@
 ## - customize classname                                     ##
 ## --------------------------------------------------------- ##
 
+## general variable initialization {{{
+readonly igNAME="${BASH_SOURCE##*/}"
+readonly -a igDEPS=(gradle sed grep httping)
+readonly -a igTAGS=(java gradle vim eclipse linux)
+# }}}
+
+## preamble functions {{{
+
 default_package() { # {{{
 	local def_package="$(git config "$profile".package)"; : "${def_package:=none}"
 
@@ -100,6 +108,8 @@ asks_jdk_parameters() { # {{{
 	done
 } # }}}
 
+# }}}
+
 # general connection test {{{
 # -----------------------
 # google dns servers reply to ICMP
@@ -127,12 +137,7 @@ select REPLY in yes no; do
 done
 # }}}
 
-## variable initialization {{{
-# general
-readonly igNAME="${BASH_SOURCE##*/}"
-readonly -a igDEPS=(gradle sed grep httping)
-readonly -a igTAGS=(java gradle vim eclipse linux)
-# specific
+## igniter variable initialization {{{
 readonly language='groovy'
 readonly package_path="${package_name//./\/}"
 readonly main_dir="src/main/${language}"
