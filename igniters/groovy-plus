@@ -324,7 +324,7 @@ add_build_gradle() { # {{{
 	|// [general] configuration
 	|project.ext {
 	$(
-		groovy_version="$(groovy -version|grep -m1 -oP '(\d+[.])+\d+(?= )')"
+		groovy_version="$(groovy -version|grep -m1 -ioP 'groovy version: \K(\d+[.])+\d+(?= )')"
 		echo "	groovyVersion   = '${groovy_version}'"
 		echo "	gradleVersion   = '$(gradle -version|grep -oPm1 '^Gradle \K\b(\d+[.])+\d+\b')'"
 		echo "	spockVersion    = '$(groovy2spock "${groovy_version}")'"
@@ -360,7 +360,7 @@ add_build_gradle() { # {{{
 	|// [crosscompile] source and target java version
 	|allprojects {
 	$(
-		echo "	sourceCompatibility = '$(java -version |& grep -m1 -oP '"\K\d[.]\d')'"
+		echo "	sourceCompatibility = '$(java -version |& grep -m1 -oP '"\K\d+(\.\d+){1,2}(?=")')'"
 		echo '	targetCompatibility = sourceCompatibility'
 	)
 	|}
