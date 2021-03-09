@@ -303,6 +303,7 @@ add_build_gradle() { # {{{
 	|	id 'codenarc'
 	$(
 		plugin='net.saliman.cobertura' && {
+			// groovy code coverage
 			echo "	id '${plugin}' version '$(gradle_plugin_latest_version "${plugin}")'"
 		}
 		[[ $lversioned == on ]] && {
@@ -332,7 +333,7 @@ add_build_gradle() { # {{{
 	|	slf4jVersion    = '1.7.30'
 	$(
 		[[ $application == 'on' ]] && {
-			echo "	log4jVersion        = '2.14.0'"
+			echo "	log4jVersion    = '2.14.0'"
 		}
 	)
 	|}
