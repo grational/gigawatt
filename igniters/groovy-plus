@@ -78,7 +78,7 @@ asks_jdk_parameters() { # {{{
 	save_as_default package "$package_name"
 
 	# main class
-	local -r def_main_class='Library'
+	local -r def_main_class="$([[ $application == on ]] && echo 'App' || echo 'Library')"
 	local -r class_pattern='^(|([A-Z][a-z0-9_]*)*)$'
 	slog -hg "Do you want to change the main library class? (${def_main_class})"
 	until
@@ -143,8 +143,9 @@ readonly package_path="${package_name//./\/}"
 readonly main_dir="src/main/${language}"
 readonly test_dir="src/test/${language}"
 readonly main_rsc='src/main/resources'
-readonly init_class="Library.${language}"
-readonly init_test="LibraryTest.${language}"
+readonly init_classname="$([[ $application == on ]] && echo 'App' || echo 'Library')"
+readonly init_class="${init_classname}.${language}"
+readonly init_test="${init_classname}Test.${language}"
 readonly default_class="${main_dir}/${package_path}/${init_class}"
 readonly default_test="${test_dir}/${package_path}/${init_test}"
 readonly gradle_conf='build.gradle'
