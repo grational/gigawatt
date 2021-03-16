@@ -488,6 +488,7 @@ add_build_gradle() { # {{{
 	|}
 	|
 	|tasks.withType(Test) {
+	|	useJUnitPlatform()
 	|	maxParallelForks = Runtime.runtime.availableProcessors() / 2
 	|}
 	|task uniTest(type: Test) {

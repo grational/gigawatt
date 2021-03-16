@@ -117,6 +117,10 @@ add_build_gradle() { # {{{
 			echo '}'
 		}
 	)
+	|
+	|test {
+	|	useJUnitPlatform()
+	|}
 	|// vim: ft=groovy:fdm=indent
 	EOF
 } # }}}
