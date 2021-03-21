@@ -686,7 +686,7 @@ add_library_specification() { # {{{
 	local ltestpath="${1}"
 	local lclass="${2}"
 	local lpackage="${3}"
-	local -r outfile="${ltestpath}/${lclass}Spec.${language}"
+	local -r outfile="${ltestpath}/${lclass}USpec.${language}"
 
 	sed 's/^|//' > "$outfile" <<- EOF
 	|package ${lpackage}
@@ -698,7 +698,7 @@ add_library_specification() { # {{{
 	| * @author $(whoami)
 	| * @date $(date +'%d-%m-%Y %H.%M')
 	| */
-	|class ${lclass}Spec extends Specification {
+	|class ${lclass}USpec extends Specification {
 	|	def "some${lclass}Method returns true"() {
 	|		setup:
 	|			${lclass} lib = new ${lclass}()
