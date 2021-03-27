@@ -305,7 +305,7 @@ add_build_gradle() { # {{{
 	|	id 'codenarc'
 	$(
 		plugin='net.saliman.cobertura' && {
-			// groovy code coverage
+			echo '	// groovy code coverage'
 			echo "	id '${plugin}' version '$(gradle_plugin_latest_version "${plugin}")'"
 		}
 		[[ $lversioned == on ]] && {
