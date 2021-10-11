@@ -362,7 +362,7 @@ add_build_gradle() { # {{{
 	|// [crosscompile] source and target java version
 	|allprojects {
 	$(
-		echo "	sourceCompatibility = '$(java -version |& grep -m1 -oP '"\K\d+(\.\d+){1,2}(?=")')'"
+		echo "	sourceCompatibility = '$(java -version |& grep -m1 -oP '"\K\d+\.\d+(?=\.[\d_]+\")')'"
 		echo '	targetCompatibility = sourceCompatibility'
 	)
 	|}
