@@ -65,11 +65,10 @@ add_build_gradle() { # {{{
 	|// [general] configuration
 	|project.ext {
 	$(
-		echo "	groovyVersion = '$(groovy -version|grep -m1 -oP '(\d+[.])+\d+(?= )')'"
-		echo "	gradleVersion = '$(gradle -version|grep -oPm1 '^Gradle \K\b(\d+[.])+\d+\b')'"
+		echo "	groovyVersion = '$(groovy -version | grep -m1 -oP '(\d+[.])+\d+(?= )' | head -n1)'"
 	)
-	|	spockVersion  = '1.3-groovy-2.4'
-	|	slf4jVersion  = '1.7.30'
+	|	spockVersion  = '2.1-groovy-3.0'
+	|	slf4jVersion  = '1.7.36'
 	|}
 	|
 	|project.with {
@@ -88,13 +87,13 @@ add_build_gradle() { # {{{
 	|// [crosscompile] source and target java version
 	|allprojects {
 	$(
-		echo "	sourceCompatibility = '$(java -version |& grep -m1 -oP '"\K\d[.]\d')'"
+		echo "	sourceCompatibility = '$(java -version |& grep -m1 -oP '"\K(\d+[.])+\d+')'"
 		echo '	targetCompatibility = sourceCompatibility'
 	)
 	|}
 	|
 	|repositories {
-	|	jcenter()
+	|	mavenCentral()
 	|
 	|	// leverage github as a maven repository
 	|	maven { url 'https://jitpack.io' }
@@ -165,7 +164,7 @@ add_cors_groovy() { # {{{
 	| * @date $(date +'%d-%m-%Y %H.%M')
 	| */
 	|import static ratpack.groovy.Groovy.ratpack
-	|import ratpack.http.MutableHeaders
+	|import ratpack.core.http.MutableHeaders
 	|
 	|ratpack {
 	|	handlers {
@@ -252,7 +251,7 @@ add_request_log_groovy() { # {{{
 	| */
 	|// external
 	|import static ratpack.groovy.Groovy.ratpack
-	|import ratpack.handling.RequestLogger
+	|import ratpack.core.handling.RequestLogger
 	|// internal
 	|
 	|ratpack {
