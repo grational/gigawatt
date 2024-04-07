@@ -242,10 +242,12 @@ groovy2spock() { # {{{
 	local l_groovy_version="${*}"
 	local spock_version
 	case $l_groovy_version in
+		4.0*)
+			spock_version='2.3-groovy-4.0';;
 		3.0*)
-			spock_version='2.0-groovy-3.0';;
+			spock_version='2.3-groovy-3.0';;
 		2.5*)
-			spock_version='1.3-groovy-2.5';;
+			spock_version='2.3-groovy-2.5';;
 		2.4*)
 			spock_version='1.3-groovy-2.4';;
 		2.3*)
@@ -266,7 +268,6 @@ groovy2spock() { # {{{
 } # }}}
 
 add_build_gradle() { # {{{
-
 	local lbuildfile="${1}"
 	local lpackage="${2}"
 	local lversion="${3}"
@@ -275,6 +276,7 @@ add_build_gradle() { # {{{
 	local lfatjar="${6}"
 	local lnexus="${7}"
 	local lversioned="${8}"
+	local groovy_version="$(groovy -version|grep -m1 -ioP 'groovy version: \K(\d+[.])+\d+(?= )')"
 
 	sed 's/^|//' > "${lbuildfile}" <<- EOF
 	|/*
@@ -308,8 +310,7 @@ add_build_gradle() { # {{{
 		[[ $lapp == on ]] && {
 			echo "	// add run task to execute application"
 			echo "	id 'application'"
-		}
-		[[ $lnexus == on || $lapp != on ]] && {
+		} || {
 			echo "	// publish on a maven-compatible repository"
 			echo "	id 'maven-publish'"
 		}; echo '}'
@@ -317,36 +318,32 @@ add_build_gradle() { # {{{
 	|
 	|// [general] configuration
 	|project.ext {
-	$(
-		groovy_version="$(groovy -version|grep -m1 -ioP 'groovy version: \K(\d+[.])+\d+(?= )')"
-		echo "	groovyVersion   = '${groovy_version}'"
-		echo "	gradleVersion   = '$(gradle -version|grep -oPm1 '^Gradle \K\b(\d+[.])+\d+\b')'"
-		echo "	spockVersion    = '$(groovy2spock "${groovy_version}")'"
-	)
-	|	codenarcVersion = '2.2.0'
-	|	slf4jVersion    = '1.7.32'
+	|	groovyVersion = '$groovy_version'
+	|	spockVersion = '$(groovy2spock "$groovy_version")'
+	|	codenarcVersion = 'latest.release'
+	|	slf4jVersion = 'latest.release'
 	$(
 		[[ $application == 'on' ]] && {
-			echo "	log4jVersion    = '2.14.1'"
+			echo "	log4jVersion = 'latest.release'"
 		}
 	)
 	|}
 	|
 	|project.with {
 	|	//project.name is set in the settings.gradle with rootProject.name
-	|	group                 "${lpackage}"
+	|	group "${lpackage}"
 	$(
 		[[ $lversioned == on ]] && {
-			echo "	version               scmVersion.version"
+			echo "	version scmVersion.version"
 		} || {
-			echo "	version               '${lversion}' // remove -SNAPSHOT for releases"
+			echo "	version '${lversion}' // remove -SNAPSHOT for releases"
 		}
 	)
-	|	description           "${ldescription}"
+	|	description "${ldescription}"
 	$(
 		[[ $lapp == on ]] && {
 			echo "	// executed if no other tasks are specified"
-			echo "	defaultTasks          'clean', 'run'"
+			echo "	defaultTasks 'clean', 'run'"
 			echo "	// application entry point"
 			echo "	mainClassName = 'Launcher'"
 		}; echo '}'
@@ -360,7 +357,7 @@ add_build_gradle() { # {{{
 	|}
 	|
 	|repositories {
-	|	jcenter()
+	|	mavenCentral()
 	|
 	|	// leverage github as a maven repository
 	|	maven { url 'https://jitpack.io' }
@@ -375,7 +372,7 @@ add_build_gradle() { # {{{
 	|
 	|dependencies {
 	|	// Groovy language support
-	|	$([[ $lapp == on ]] && { echo -n implementation; } || { echo -n api; }) "org.codehaus.groovy:groovy:\$groovyVersion"
+	|	$([[ $lapp == on ]] && { echo -n implementation; } || { echo -n api; }) "org.$([[ $groovy_version =~ 4.* ]] && echo apache || echo codehaus).groovy:groovy:\$groovyVersion"
 	|
 	|	// Slf4j dependencies
 	|	implementation "org.slf4j:slf4j-api:\$slf4jVersion"
@@ -386,7 +383,6 @@ add_build_gradle() { # {{{
 			echo '	implementation "org.apache.logging.log4j:log4j-core:$log4jVersion"'
 		}
 	)
-	|
 	|	// We use the awesome Spock testing and specification framework
 	|	testImplementation "org.spockframework:spock-core:\$spockVersion"
 	|}
@@ -434,6 +430,17 @@ add_build_gradle() { # {{{
 			echo '	}'
 			echo '}'
 			echo
+		} || {
+			echo 'publishing {'
+			echo '	publications {'
+			echo '		mavenJava(MavenPublication) {'
+			echo '			groupId = "$group"'
+			echo "			artifactId = '${project}'"
+			echo '			version = "$version"'
+			echo '			from components.java'
+			echo '		}'
+			echo '	}'
+			echo '}'
 		}
 	)
 	|// [tasks] configuration //
@@ -760,7 +767,7 @@ if ! silent_gradle tasks; then
 fi
 # }}}
 
-# 7.2 create library / library_specification
+# 7.2 create library / library_specification {{{
 mainpath="${gradle_prefix}/${main_dir}/${package_path}"
 testpath="${gradle_prefix}/${test_dir}/${package_path}"
 
@@ -771,12 +778,14 @@ if ! silent_gradle test; then
 	slog "Files '$main_class', '${main_class}Spec' not created correctly: exiting..."
 	exit 1
 fi
+# }}}
 
-# 7.3 optionally generate Launcher class
+# 7.3 optionally generate Launcher class {{{
 if [[ $application == 'on' ]]; then
 	add_launcher_class "${gradle_prefix}/${main_dir}" "${main_class}" "${package_name}"
-fi
-# No need to test because of set -e
+fi 
+# No need to test because of set -e }}}
+
 # }}}
 
 ## 6. Uncompress PAYLOAD (codenarc conf) into the project {{{
